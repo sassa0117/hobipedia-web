@@ -1,0 +1,226 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+// メルカリsoldデータ + さっさのタグ付け
+model TaggedItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // メルカリから取得
+  mercariId   String  @unique
+  name        String
+  price       Int
+  description String
+  soldDate    String
+  photos      String  // JSON array of URLs
+  condition   String  // メルカリの状態表記
+  category    String?
+  shippingMethod String?
+  sellerName  String?
+
+  // さっさがタグ付け
+  ipName      String?  // IP名（仮面ライダーオーズ等）
+  series      String?  // シリーズ（仮面ライダー、スーパー戦隊等）
+  productType String?  // 商品種別（DXベルト、フィギュア、ぬいぐるみ等）
+  gradeRank   String?  // 状態ランク（S/A/B/C/D）
+  accessories String?  // 付属品（完品/箱のみ/本体のみ等）
+  limitedType String?  // 限定性（一般/限定/プレバン/イベント限定等）
+  hasTop      Boolean? // トップ（上位互換）あり
+  hasBottom   Boolean? // アンダー（下位互換）あり
+  topNote     String?  // トップの補足（CSMあり等）
+  bottomNote  String?  // アンダーの補足
+  releaseYear Int?     // 発売年
+  memo        String?  // 自由メモ
+
+  @@index([series])
+  @@index([ipName])
+  @@index([productType])
+}
+
+// アニメニュース（アニメイトタイムズ等から取得）
+model AnimeNews {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  title     String   // ニュース記事タイトル
+  url       String   @unique // 記事URL（重複防止）
+  source    String   // "animatetimes" etc.
+  ipTitle   String   // 抽出したIP/作品タイトル
+  newsType  String   // "anime" | "movie" | "season" | "remake" | "game" | "other"
+  publishedAt String // 記事の公開日
+
+  trendResults TrendResult[]
+
+  @@index([ipTitle])
+  @@index([newsType])
+}
+
+// トレンドスキャン実行記録
+model TrendScan {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  status    String   @default("running") // "running" | "completed" | "failed"
+  newsCount Int      @default(0)    // 取得したニュース数
+  hitCount  Int      @default(0)    // 価格上昇検知数
+  error     String?
+
+  results   TrendResult[]
+}
+
+// トレンド検知結果
+model TrendResult {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  scanId    String
+  scan      TrendScan @relation(fields: [scanId], references: [id])
+
+  newsId    String?
+  news      AnimeNews? @relation(fields: [newsId], references: [id])
+
+  keyword       String  // 検索に使ったキーワード
+  goodsType     String  // "フィギュア" | "DX玩具" etc.
+  ipTitle       String  // 作品タイトル
+
+  // 価格トレンド
+  recentMedian  Int     // 直近7日の中央値
+  olderMedian   Int     // それ以前30日の中央値
+  changePercent Float   // 変動率(%)
+  recentCount   Int     // 直近サンプル数
+  olderCount    Int     // 過去サンプル数
+
+  // メルカリsoldデータ（JSON）
+  recentItems   String  // JSON: [{name, price, date, url}]
+  olderItems    String  // JSON: [{name, price, date, url}]
+
+  @@index([scanId])
+  @@index([ipTitle])
+  @@index([changePercent])
+}
+
+// ========================================
+// IPイベント（アニメ放送・映画公開・完結等。グラフ上にオーバーレイ表示する）
+// ========================================
+
+model IpEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  ipTitle     String  // IP正式名称（呪術廻戦、鬼滅の刃等）
+  ipShort     String? // IP略称
+  eventType   String  // anime_start / anime_end / movie / manga_end / exhibition / collaboration / game / other
+  eventLabel  String  // 表示用ラベル（「1期放送開始」「劇場版公開」等）
+  startDate   String  // YYYY-MM-DD
+  endDate     String? // YYYY-MM-DD（期間があるもの用）
+
+  @@index([ipTitle])
+  @@index([ipShort])
+  @@index([startDate])
+}
+
+// ========================================
+// グッズカタログ（駿河屋 + メルカリ比較の時系列追跡）
+// ========================================
+
+// 商品マスタ（駿河屋の商品1つ = 1レコード）
+model CatalogItem {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  // 駿河屋から取得
+  surugayaUrl   String  @unique // 商品ページURL（ユニークキー）
+  name          String          // 駿河屋の商品名（構造化済み）
+  category      String?         // カテゴリ
+  maker         String?         // メーカー
+  listPrice     Int?            // 定価（メーカー希望小売価格）
+  releaseDate   String?         // 発売日 YYYY-MM-DD
+  description   String?         // 商品解説
+  venueTags     String?         // JSON array: ["ジャンプフェスタ","先行販売"] 等
+
+  // 構造化タグ（Hobipedia用）
+  productType   String?         // 商品種別（フィギュア/一番くじ/アクスタ/缶バッジ等）
+  characterName String?         // キャラ名（麗日お茶子等）
+  ipTitle       String?         // IP正式名称（「」内から抽出。僕のヒーローアカデミア等）
+  eventName     String?         // イベント名（ジャンプフェスタ2026等）
+  limitedType   String?         // 限定性（一般/イベント限定/会場限定/先行販売/コラボカフェ等）
+
+  // 検索メタ
+  searchKeyword String          // どのキーワードで取得したか
+  ipShort       String?         // IP略称（ヒロアカ等）
+
+  // メルカリ検索用
+  mercariKeyword String?        // メルカリ検索に使ったキーワード
+
+  // 画像
+  imageUrl      String?         // 駿河屋の商品メイン画像URL
+
+  snapshots PriceSnapshot[]
+
+  @@index([searchKeyword])
+  @@index([ipShort])
+  @@index([releaseDate])
+}
+
+// 価格スナップショット（実行ごとに1レコード）
+model PriceSnapshot {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  itemId    String
+  item      CatalogItem @relation(fields: [itemId], references: [id])
+
+  // 駿河屋の価格（その時点）
+  surugayaPrice Int?
+  soldOut       Boolean @default(false)
+
+  // メルカリsoldデータ（その時点）
+  mercariMedian  Int?    // sold中央値
+  mercariCount   Int     @default(0) // sold件数
+
+  // 週ごとの相場（JSON）
+  weeklyTrend    String? // JSON: {"直近7日":{median,count},"8-14日前":{...},...}
+
+  // 計算値
+  diffPercent    Float?  // (mercariMedian - surugayaPrice) / surugayaPrice * 100
+  trendDirection Float?  // 直近 vs 過去の変動率%
+
+  @@index([itemId])
+  @@index([createdAt])
+  @@index([diffPercent])
+  @@index([trendDirection])
+}
+
+// メルカリsoldの個別レコード（値動きがある商品のみ保存）
+// 駿河屋差20%以上 or 相場変動率10%以上の商品をスキャンした時に、
+// sold個別データ（1件ずつの売買日と価格）をここに蓄積する。
+// グラフは可能な限りここから描画する（weeklyTrendのバケット集計より精度高い）
+model MercariSoldRecord {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  itemId    String
+  price     Int
+  soldDate  String  // YYYY-MM-DD
+  mercariName String?  // メルカリ側の商品名（検証用）
+
+  mercariItemId String? // メルカリの商品ID（URL生成用）
+  thumbnailUrl  String? // サムネ画像URL
+  itemConditionId Int?  // 1=新品 2=未使用に近い 3=目立った傷なし 4=やや傷汚れ 5=傷汚れ 6=全体的に状態悪い
+
+  geminiVerdict   String?   // same|variant|different|unclear (NULL=未照合)
+  geminiCheckedAt DateTime? // 照合実施日時（NULL=未照合 → batch-gemini-match の対象）
+
+  @@unique([itemId, soldDate, price])
+  @@index([itemId])
+  @@index([soldDate])
+  @@index([geminiCheckedAt])
+}
