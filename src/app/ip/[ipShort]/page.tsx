@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "../../_components/SiteHeader";
+import { ItemCard } from "../../_components/ItemCard";
 import { classify, SUBCATEGORIES } from "@/lib/subcategories";
 
 export const dynamic = "force-dynamic";
@@ -104,58 +105,6 @@ function fmt(n: number | null | undefined): string {
   return `¥${n.toLocaleString()}`;
 }
 
-function ItemCard({ item }: { item: ItemRow }) {
-  const td = item.trendDirection;
-  return (
-    <Link
-      href={`/catalog/${item.id}`}
-      className="flex flex-col overflow-hidden rounded-lg border border-zinc-200 bg-white transition hover:border-sky-300"
-    >
-      <div className="aspect-square w-full overflow-hidden bg-zinc-50">
-        {item.imageUrl ? (
-          // eslint-disable-next-line @next/next/no-img-element
-          <img
-            src={item.imageUrl}
-            alt={item.name}
-            className="h-full w-full object-contain"
-          />
-        ) : (
-          <div className="flex h-full w-full items-center justify-center text-xs text-zinc-300">
-            no image
-          </div>
-        )}
-      </div>
-      <div className="flex flex-1 flex-col gap-1 p-3">
-        <p className="line-clamp-2 text-[13px] leading-snug text-zinc-700">
-          {item.name}
-        </p>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
-          <span className="text-[15px] font-bold text-zinc-800">
-            {fmt(item.mercariMedian)}
-          </span>
-          {td != null && (
-            <span
-              className={`text-[12px] font-bold ${
-                td > 0
-                  ? "text-emerald-600"
-                  : td < 0
-                  ? "text-rose-500"
-                  : "text-zinc-400"
-              }`}
-            >
-              {td > 0 ? "+" : ""}
-              {Math.round(td)}%
-            </span>
-          )}
-        </div>
-        {item.releaseDate && (
-          <p className="text-[10px] text-zinc-400">{item.releaseDate}</p>
-        )}
-      </div>
-    </Link>
-  );
-}
-
 function buildHref(
   ipShort: string,
   patch: { subcat?: string | null; sort?: SortKey | null }
@@ -213,8 +162,28 @@ export default async function IpPage({
     totalCount: allItems.length,
     median: median(prices),
     max: prices.length ? Math.max(...prices) : null,
+    priceSampleCount: prices.length,
     rising: filtered.filter((i) => (i.trendDirection ?? 0) > 20).length,
   };
+
+  const groupByYearMonth =
+    activeSort === "release_desc" || activeSort === "release_asc";
+  const groups: { key: string; label: string; items: ItemRow[] }[] = [];
+  if (groupByYearMonth) {
+    const map = new Map<string, ItemRow[]>();
+    for (const it of sorted) {
+      const ym = it.releaseDate ? it.releaseDate.slice(0, 7) : "unknown";
+      if (!map.has(ym)) map.set(ym, []);
+      map.get(ym)!.push(it);
+    }
+    for (const [ym, items] of map) {
+      const label =
+        ym === "unknown"
+          ? "発売日不明"
+          : `${ym.slice(0, 4)}年${parseInt(ym.slice(5, 7), 10)}月`;
+      groups.push({ key: ym, label, items });
+    }
+  }
 
   return (
     <div className="min-h-screen bg-zinc-100">
@@ -266,11 +235,21 @@ export default async function IpPage({
             <p className="mt-1 text-xl font-bold text-zinc-900">
               {fmt(stats.median)}
             </p>
+            <p className="mt-0.5 text-[10px] text-zinc-400">
+              {stats.priceSampleCount > 0
+                ? `${stats.priceSampleCount}件のデータから`
+                : "データなし"}
+            </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
             <p className="text-xs text-zinc-500">最高額</p>
             <p className="mt-1 text-xl font-bold text-zinc-900">
               {fmt(stats.max)}
+            </p>
+            <p className="mt-0.5 text-[10px] text-zinc-400">
+              {stats.priceSampleCount > 0
+                ? `${stats.priceSampleCount}件のデータから`
+                : "データなし"}
             </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -357,10 +336,46 @@ export default async function IpPage({
             <div className="rounded-xl bg-white p-8 text-center text-sm text-zinc-500">
               このカテゴリの商品はまだありません。
             </div>
+          ) : groupByYearMonth ? (
+            <div className="space-y-8">
+              {groups.map((g) => (
+                <div key={g.key}>
+                  <h2 className="mb-3 flex items-baseline gap-2 border-b border-zinc-300 pb-1.5">
+                    <span className="text-lg font-bold text-zinc-800">
+                      {g.label}
+                    </span>
+                    <span className="text-[12px] text-zinc-400">
+                      {g.items.length}件
+                    </span>
+                  </h2>
+                  <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+                    {g.items.map((item) => (
+                      <ItemCard
+                        key={item.id}
+                        id={item.id}
+                        name={item.name}
+                        imageUrl={item.imageUrl}
+                        releaseDate={item.releaseDate}
+                        mercariMedian={item.mercariMedian}
+                        trendDirection={item.trendDirection}
+                      />
+                    ))}
+                  </div>
+                </div>
+              ))}
+            </div>
           ) : (
             <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
               {sorted.map((item) => (
-                <ItemCard key={item.id} item={item} />
+                <ItemCard
+                  key={item.id}
+                  id={item.id}
+                  name={item.name}
+                  imageUrl={item.imageUrl}
+                  releaseDate={item.releaseDate}
+                  mercariMedian={item.mercariMedian}
+                  trendDirection={item.trendDirection}
+                />
               ))}
             </div>
           )}
