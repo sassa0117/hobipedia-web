@@ -138,15 +138,17 @@ export default async function ItemPage({
           今買えるところ
         </h2>
         <div className="mt-3 grid gap-2 sm:grid-cols-2">
-          <a
-            href={item.surugayaUrl}
-            target="_blank"
-            rel="noopener noreferrer"
-            className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 hover:border-zinc-400"
-          >
-            <span>駿河屋で見る</span>
-            <span className="text-xs text-zinc-400">↗</span>
-          </a>
+          {item.surugayaUrl && (
+            <a
+              href={item.surugayaUrl}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center justify-between rounded-lg border border-zinc-200 p-3 hover:border-zinc-400"
+            >
+              <span>駿河屋で見る</span>
+              <span className="text-xs text-zinc-400">↗</span>
+            </a>
+          )}
           <a
             href={mercariSearch}
             target="_blank"
