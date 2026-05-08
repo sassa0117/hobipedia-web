@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "../../_components/SiteHeader";
+import { classify, SUBCATEGORIES } from "@/lib/subcategories";
 
 export const dynamic = "force-dynamic";
 
@@ -21,15 +22,25 @@ type ItemRow = {
   diffPercent: number | null;
 };
 
-type Stats = {
-  itemCount: number;
-  median: number | null;
-  max: number | null;
-  rising: number;
+type SortKey =
+  | "release_desc"
+  | "release_asc"
+  | "price_desc"
+  | "trend_desc"
+  | "name_asc";
+
+const SORT_LABEL: Record<SortKey, string> = {
+  release_desc: "発売日（新→古）",
+  release_asc: "発売日（古→新）",
+  price_desc: "相場（高→低）",
+  trend_desc: "変動率（高→低）",
+  name_asc: "名前順",
 };
 
-async function getIpData(ipShort: string) {
-  const items = await prisma.$queryRawUnsafe<ItemRow[]>(
+const MIN_CHIP_COUNT = 3;
+
+async function getIpItems(ipShort: string): Promise<ItemRow[]> {
+  return prisma.$queryRawUnsafe<ItemRow[]>(
     `
     SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName",
       ci."limitedType", ci."imageUrl", ci."releaseDate",
@@ -38,46 +49,41 @@ async function getIpData(ipShort: string) {
     LEFT JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
       AND ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
     WHERE ci."ipShort" = $1
-    ORDER BY ps."mercariMedian" DESC NULLS LAST, ci."createdAt" DESC
     `,
     ipShort
   );
+}
 
-  const statsRow = await prisma.$queryRawUnsafe<
-    { median: number | null; max: number | null; rising: number }[]
-  >(
-    `
-    SELECT
-      percentile_cont(0.5) WITHIN GROUP (ORDER BY ps."mercariMedian")::int AS median,
-      MAX(ps."mercariMedian")::int AS max,
-      COUNT(*) FILTER (WHERE ps."trendDirection" > 20)::int AS rising
-    FROM "CatalogItem" ci
-    LEFT JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
-      AND ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
-    WHERE ci."ipShort" = $1 AND ps."mercariMedian" IS NOT NULL
-    `,
-    ipShort
-  );
+function sortItems(items: ItemRow[], sort: SortKey): ItemRow[] {
+  const arr = [...items];
+  switch (sort) {
+    case "release_desc":
+      return arr.sort((a, b) =>
+        (b.releaseDate ?? "").localeCompare(a.releaseDate ?? "")
+      );
+    case "release_asc":
+      return arr.sort((a, b) =>
+        (a.releaseDate ?? "9999").localeCompare(b.releaseDate ?? "9999")
+      );
+    case "price_desc":
+      return arr.sort(
+        (a, b) => (b.mercariMedian ?? -1) - (a.mercariMedian ?? -1)
+      );
+    case "trend_desc":
+      return arr.sort(
+        (a, b) =>
+          (b.trendDirection ?? -Infinity) - (a.trendDirection ?? -Infinity)
+      );
+    case "name_asc":
+      return arr.sort((a, b) => a.name.localeCompare(b.name, "ja"));
+  }
+}
 
-  const stats: Stats = {
-    itemCount: items.length,
-    median: statsRow[0]?.median ?? null,
-    max: statsRow[0]?.max ?? null,
-    rising: Number(statsRow[0]?.rising ?? 0),
-  };
-
-  const trendingTop = [...items]
-    .filter((i) => i.trendDirection != null && (i.mercariMedian ?? 0) >= 1000)
-    .sort((a, b) => (b.trendDirection ?? 0) - (a.trendDirection ?? 0))
-    .slice(0, 5);
-
-  const typeBreakdown = items.reduce<Record<string, number>>((acc, it) => {
-    const k = it.productType ?? "—";
-    acc[k] = (acc[k] ?? 0) + 1;
-    return acc;
-  }, {});
-
-  return { items, stats, trendingTop, typeBreakdown };
+function median(nums: number[]): number | null {
+  if (nums.length === 0) return null;
+  const s = [...nums].sort((a, b) => a - b);
+  const m = Math.floor(s.length / 2);
+  return s.length % 2 ? s[m] : Math.round((s[m - 1] + s[m]) / 2);
 }
 
 export async function generateMetadata({
@@ -130,7 +136,11 @@ function ItemCard({ item }: { item: ItemRow }) {
           {td != null && (
             <span
               className={`text-[12px] font-bold ${
-                td > 0 ? "text-emerald-600" : td < 0 ? "text-rose-500" : "text-zinc-400"
+                td > 0
+                  ? "text-emerald-600"
+                  : td < 0
+                  ? "text-rose-500"
+                  : "text-zinc-400"
               }`}
             >
               {td > 0 ? "+" : ""}
@@ -138,38 +148,73 @@ function ItemCard({ item }: { item: ItemRow }) {
             </span>
           )}
         </div>
-        <div className="flex flex-wrap gap-1">
-          {item.productType && (
-            <span className="rounded-full bg-zinc-100 px-2 py-0.5 text-[10px] text-zinc-500">
-              {item.productType}
-            </span>
-          )}
-          {item.limitedType && (
-            <span className="rounded-full bg-pink-50 px-2 py-0.5 text-[10px] text-pink-700">
-              {item.limitedType}
-            </span>
-          )}
-        </div>
+        {item.releaseDate && (
+          <p className="text-[10px] text-zinc-400">{item.releaseDate}</p>
+        )}
       </div>
     </Link>
   );
 }
 
+function buildHref(
+  ipShort: string,
+  patch: { subcat?: string | null; sort?: SortKey | null }
+): string {
+  const params = new URLSearchParams();
+  if (patch.subcat) params.set("subcat", patch.subcat);
+  if (patch.sort && patch.sort !== "release_desc") params.set("sort", patch.sort);
+  const qs = params.toString();
+  return `/ip/${encodeURIComponent(ipShort)}${qs ? `?${qs}` : ""}`;
+}
+
 export default async function IpPage({
   params,
+  searchParams,
 }: {
   params: Promise<{ ipShort: string }>;
+  searchParams: Promise<{ subcat?: string; sort?: string }>;
 }) {
-  const { ipShort: raw } = await params;
-  const ipShort = decodeURIComponent(raw);
+  const { ipShort: rawIp } = await params;
+  const sp = await searchParams;
+  const ipShort = decodeURIComponent(rawIp);
+  const activeSubcat = sp.subcat ?? null;
+  const activeSort: SortKey = (
+    sp.sort && sp.sort in SORT_LABEL ? sp.sort : "release_desc"
+  ) as SortKey;
 
-  const { items, stats, trendingTop, typeBreakdown } = await getIpData(ipShort);
+  const allItems = await getIpItems(ipShort);
+  if (allItems.length === 0) notFound();
 
-  if (items.length === 0) notFound();
+  const labelCount = new Map<string, number>();
+  const itemLabels = new Map<string, string[]>();
+  for (const it of allItems) {
+    const labels = classify(it.name);
+    itemLabels.set(it.id, labels);
+    for (const lb of labels) {
+      labelCount.set(lb, (labelCount.get(lb) ?? 0) + 1);
+    }
+  }
 
-  const typeEntries = Object.entries(typeBreakdown).sort(
-    (a, b) => b[1] - a[1]
-  );
+  const chips = Array.from(labelCount.entries())
+    .filter(([, c]) => c >= MIN_CHIP_COUNT)
+    .filter(([label]) => label in SUBCATEGORIES)
+    .sort((a, b) => b[1] - a[1]);
+
+  const filtered = activeSubcat
+    ? allItems.filter((it) => itemLabels.get(it.id)?.includes(activeSubcat))
+    : allItems;
+  const sorted = sortItems(filtered, activeSort);
+
+  const prices = filtered
+    .map((i) => i.mercariMedian)
+    .filter((n): n is number => n != null);
+  const stats = {
+    count: filtered.length,
+    totalCount: allItems.length,
+    median: median(prices),
+    max: prices.length ? Math.max(...prices) : null,
+    rising: filtered.filter((i) => (i.trendDirection ?? 0) > 20).length,
+  };
 
   return (
     <div className="min-h-screen bg-zinc-100">
@@ -181,18 +226,39 @@ export default async function IpPage({
             Hobipedia
           </Link>
           <span className="mx-2">/</span>
-          <span className="text-zinc-700">{ipShort}</span>
+          <Link
+            href={`/ip/${encodeURIComponent(ipShort)}`}
+            className="hover:underline"
+          >
+            {ipShort}
+          </Link>
+          {activeSubcat && (
+            <>
+              <span className="mx-2">/</span>
+              <span className="text-zinc-700">{activeSubcat}</span>
+            </>
+          )}
         </nav>
 
         <h1 className="mt-3 text-2xl font-bold text-zinc-900">
           {ipShort}のグッズ相場
+          {activeSubcat && (
+            <span className="ml-2 text-base text-sky-600">— {activeSubcat}</span>
+          )}
         </h1>
 
         <section className="mt-5 grid grid-cols-2 gap-3 sm:grid-cols-4">
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
-            <p className="text-xs text-zinc-500">登録商品</p>
+            <p className="text-xs text-zinc-500">
+              {activeSubcat ? "絞り込み" : "登録商品"}
+            </p>
             <p className="mt-1 text-xl font-bold text-zinc-900">
-              {stats.itemCount.toLocaleString()}
+              {stats.count.toLocaleString()}
+              {activeSubcat && (
+                <span className="ml-1 text-xs font-normal text-zinc-400">
+                  / {stats.totalCount.toLocaleString()}
+                </span>
+              )}
             </p>
           </div>
           <div className="rounded-lg border border-zinc-200 bg-white p-4">
@@ -215,57 +281,89 @@ export default async function IpPage({
           </div>
         </section>
 
-        {typeEntries.length > 0 && (
+        {chips.length > 0 && (
           <section className="mt-6">
-            <p className="mb-2 text-[12px] font-bold text-zinc-400">商品種別</p>
+            <p className="mb-2 text-[12px] font-bold text-zinc-400">カテゴリ</p>
             <div className="flex flex-wrap gap-2">
-              {typeEntries.map(([t, c]) => (
-                <span
-                  key={t}
-                  className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5"
-                >
-                  <span className="text-[12px] text-stone-600">{t}</span>
-                  <span className="text-[11px] text-stone-400">{c}</span>
+              <Link
+                href={buildHref(ipShort, { subcat: null, sort: activeSort })}
+                className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
+                  activeSubcat == null
+                    ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
+                    : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
+                }`}
+              >
+                すべて
+                <span className="ml-1.5 text-[11px] text-zinc-400">
+                  {allItems.length}
                 </span>
-              ))}
+              </Link>
+              {chips.map(([label, count]) => {
+                const active = activeSubcat === label;
+                return (
+                  <Link
+                    key={label}
+                    href={buildHref(ipShort, {
+                      subcat: active ? null : label,
+                      sort: activeSort,
+                    })}
+                    className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
+                      active
+                        ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
+                        : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
+                    }`}
+                  >
+                    {label}
+                    <span className="ml-1.5 text-[11px] text-zinc-400">
+                      {count}
+                    </span>
+                  </Link>
+                );
+              })}
             </div>
           </section>
         )}
 
-        {trendingTop.length > 0 && (
-          <section className="mt-8">
-            <h2 className="text-base font-semibold text-zinc-900">急上昇</h2>
-            <div className="mt-3 overflow-hidden rounded-xl bg-white shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
-              {trendingTop.map((item) => (
-                <Link
-                  key={item.id}
-                  href={`/catalog/${item.id}`}
-                  className="flex items-center gap-3 border-b border-zinc-100 px-4 py-2.5 last:border-0 hover:bg-zinc-50"
-                >
-                  <span className="min-w-[54px] rounded bg-emerald-50 px-1.5 py-0.5 text-right text-[13px] font-bold text-emerald-600">
-                    +{Math.round(item.trendDirection ?? 0)}%
-                  </span>
-                  <span className="flex-1 truncate text-[13px] text-zinc-700">
-                    {item.name}
-                  </span>
-                  <span className="shrink-0 text-[13px] text-zinc-600">
-                    {fmt(item.mercariMedian)}
-                  </span>
-                </Link>
-              ))}
-            </div>
-          </section>
-        )}
-
-        <section className="mt-8">
+        <section className="mt-6 flex items-center justify-between gap-3">
           <h2 className="text-base font-semibold text-zinc-900">
-            すべての商品（{stats.itemCount.toLocaleString()}件）
+            {stats.count.toLocaleString()}件
           </h2>
-          <div className="mt-4 grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
-            {items.map((item) => (
-              <ItemCard key={item.id} item={item} />
-            ))}
+          <div className="flex flex-wrap items-center gap-2 text-[12px]">
+            <span className="text-zinc-500">並び替え:</span>
+            {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
+              const active = activeSort === k;
+              return (
+                <Link
+                  key={k}
+                  href={buildHref(ipShort, {
+                    subcat: activeSubcat,
+                    sort: k,
+                  })}
+                  className={`rounded-full px-3 py-1 transition ${
+                    active
+                      ? "bg-zinc-800 text-white"
+                      : "bg-white text-zinc-600 hover:bg-zinc-50"
+                  }`}
+                >
+                  {SORT_LABEL[k]}
+                </Link>
+              );
+            })}
           </div>
+        </section>
+
+        <section className="mt-4">
+          {sorted.length === 0 ? (
+            <div className="rounded-xl bg-white p-8 text-center text-sm text-zinc-500">
+              このカテゴリの商品はまだありません。
+            </div>
+          ) : (
+            <div className="grid grid-cols-2 gap-4 sm:grid-cols-3 md:grid-cols-4 lg:grid-cols-5">
+              {sorted.map((item) => (
+                <ItemCard key={item.id} item={item} />
+              ))}
+            </div>
+          )}
         </section>
       </main>
     </div>
