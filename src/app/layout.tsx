@@ -1,5 +1,6 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
+import Script from "next/script";
 import "./globals.css";
 
 const geistSans = Geist({
@@ -53,6 +54,13 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white text-zinc-900">
         {children}
+        <Script id="vc-linkswitch-pid" strategy="afterInteractive">
+          {`var vc_pid = "892608852";`}
+        </Script>
+        <Script
+          src="https://aml.valuecommerce.com/vcdal.js"
+          strategy="afterInteractive"
+        />
       </body>
     </html>
   );
