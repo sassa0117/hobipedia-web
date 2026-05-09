@@ -86,12 +86,31 @@ export async function generateMetadata({
   const { id } = await params;
   const item = await prisma.catalogItem.findUnique({
     where: { id },
-    select: { name: true, ipShort: true },
+    select: { name: true, ipShort: true, imageUrl: true, productType: true },
   });
   if (!item) return { title: "Not Found" };
+  const title = `${item.name} 相場・価格推移`;
+  const description = `${item.ipShort ?? ""} ${item.name}${
+    item.productType ? `（${item.productType}）` : ""
+  } のメルカリsold相場・駿河屋価格・推移を一画面で確認。`;
+  const url = `https://hobipedia.jp/catalog/${id}`;
   return {
-    title: `${item.name} 相場・価格推移`,
-    description: `${item.ipShort ?? ""} ${item.name} のメルカリsold相場・駿河屋価格・推移`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title,
+      description,
+      ...(item.imageUrl ? { images: [{ url: item.imageUrl }] } : {}),
+    },
+    twitter: {
+      card: item.imageUrl ? "summary_large_image" : "summary",
+      title,
+      description,
+      ...(item.imageUrl ? { images: [item.imageUrl] } : {}),
+    },
   };
 }
 
@@ -194,8 +213,41 @@ export default async function ItemPage({
 
   const chartPoints = buildChartPoints(snapshots, soldRecords);
 
+  const productSchema: Record<string, unknown> = {
+    "@context": "https://schema.org",
+    "@type": "Product",
+    name: item.name,
+    url: `https://hobipedia.jp/catalog/${item.id}`,
+  };
+  if (item.imageUrl) productSchema.image = item.imageUrl;
+  if (item.description) {
+    productSchema.description = item.description.slice(0, 500);
+  } else {
+    productSchema.description = `${item.ipShort ?? ""} ${item.name}${
+      item.productType ? `（${item.productType}）` : ""
+    } のメルカリsold相場・駿河屋価格・推移情報。`;
+  }
+  if (item.maker) productSchema.brand = { "@type": "Brand", name: item.maker };
+  if (item.category) productSchema.category = item.category;
+  if (latest?.surugayaPrice != null) {
+    productSchema.offers = {
+      "@type": "Offer",
+      priceCurrency: "JPY",
+      price: latest.surugayaPrice,
+      availability: latest.soldOut
+        ? "https://schema.org/OutOfStock"
+        : "https://schema.org/InStock",
+      url: item.surugayaUrl ?? `https://hobipedia.jp/catalog/${item.id}`,
+      seller: { "@type": "Organization", name: "駿河屋" },
+    };
+  }
+
   return (
     <div className="min-h-screen bg-zinc-100">
+      <script
+        type="application/ld+json"
+        dangerouslySetInnerHTML={{ __html: JSON.stringify(productSchema) }}
+      />
       <SiteHeader />
 
       {/* ← 戻る サブバー */}
