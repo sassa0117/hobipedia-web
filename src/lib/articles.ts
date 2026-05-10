@@ -84,3 +84,38 @@ export async function getAllArticleSlugs(): Promise<string[]> {
   const articles = await listArticles();
   return articles.map((a) => a.slug);
 }
+
+export async function listArticlesForCatalog(
+  catalogId: string
+): Promise<ArticleSummary[]> {
+  const all = await listArticles();
+  return all.filter((a) =>
+    (a.relatedCatalogIds ?? []).includes(catalogId)
+  );
+}
+
+export const ARTICLES_PER_PAGE = 20;
+
+export async function listArticlesPage(page: number): Promise<{
+  articles: ArticleSummary[];
+  total: number;
+  totalPages: number;
+  page: number;
+}> {
+  const all = await listArticles();
+  const total = all.length;
+  const totalPages = Math.max(1, Math.ceil(total / ARTICLES_PER_PAGE));
+  const safePage = Math.min(Math.max(1, page), totalPages);
+  const start = (safePage - 1) * ARTICLES_PER_PAGE;
+  return {
+    articles: all.slice(start, start + ARTICLES_PER_PAGE),
+    total,
+    totalPages,
+    page: safePage,
+  };
+}
+
+export async function getArticlesPageCount(): Promise<number> {
+  const all = await listArticles();
+  return Math.max(1, Math.ceil(all.length / ARTICLES_PER_PAGE));
+}

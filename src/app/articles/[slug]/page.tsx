@@ -74,9 +74,17 @@ export default async function ArticleDetailPage({
           },
         })
       : Promise.resolve([]),
-    listArticles().then((list) =>
-      list.filter((a) => a.slug !== article.slug).slice(0, 4)
-    ),
+    listArticles().then((list) => {
+      const candidates = list.filter((a) => a.slug !== article.slug);
+      const articleTags = new Set(article.tags ?? []);
+      if (articleTags.size === 0) return candidates.slice(0, 4);
+      const tagged = candidates.filter((a) =>
+        (a.tags ?? []).some((t) => articleTags.has(t))
+      );
+      const taggedSlugs = new Set(tagged.map((a) => a.slug));
+      const fillers = candidates.filter((a) => !taggedSlugs.has(a.slug));
+      return [...tagged, ...fillers].slice(0, 4);
+    }),
   ]);
 
   const url = `https://hobipedia.jp/articles/${article.slug}`;

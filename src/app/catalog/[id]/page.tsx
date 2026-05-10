@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { listArticlesForCatalog } from "@/lib/articles";
 import { SiteHeader } from "../../_components/SiteHeader";
 
 export const dynamic = "force-dynamic";
@@ -172,7 +173,7 @@ export default async function ItemPage({
 
   if (!item) notFound();
 
-  const [snapshots, soldRecords, ipEvents] = await Promise.all([
+  const [snapshots, soldRecords, ipEvents, relatedArticles] = await Promise.all([
     prisma.$queryRawUnsafe<SnapshotRow[]>(
       `SELECT id, "createdAt", "surugayaPrice", "soldOut", "mercariMedian",
          "mercariCount", "diffPercent", "trendDirection"
@@ -198,6 +199,7 @@ export default async function ItemPage({
           item.ipTitle ?? ""
         )
       : Promise.resolve([]),
+    listArticlesForCatalog(id),
   ]);
 
   const latest = snapshots[0] ?? null;
@@ -604,6 +606,40 @@ export default async function ItemPage({
                 <p className="whitespace-pre-wrap text-[13px] leading-7 text-zinc-700">
                   {item.description}
                 </p>
+              </SectionCard>
+            )}
+
+            {/* 関連記事 */}
+            {relatedArticles.length > 0 && (
+              <SectionCard title="関連記事">
+                <ul className="space-y-2">
+                  {relatedArticles.map((a) => (
+                    <li
+                      key={a.slug}
+                      className="overflow-hidden rounded-lg border border-zinc-100"
+                    >
+                      <Link
+                        href={`/articles/${a.slug}`}
+                        className="block p-3 hover:bg-zinc-50"
+                      >
+                        <p className="text-[11px] text-zinc-400">
+                          {a.publishedAt.replace(/-/g, "/").slice(0, 10)}
+                          {a.tags && a.tags.length > 0 ? (
+                            <span className="ml-2">
+                              {a.tags.map((t) => `#${t}`).join(" ")}
+                            </span>
+                          ) : null}
+                        </p>
+                        <p className="mt-0.5 text-[14px] font-bold text-zinc-800">
+                          {a.title}
+                        </p>
+                        <p className="mt-1 line-clamp-2 text-[12px] text-zinc-600">
+                          {a.description}
+                        </p>
+                      </Link>
+                    </li>
+                  ))}
+                </ul>
               </SectionCard>
             )}
           </div>
