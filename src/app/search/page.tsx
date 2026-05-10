@@ -74,7 +74,10 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { q } = await searchParams;
   const title = q ? `「${q}」の検索結果` : "検索";
-  return { title };
+  return {
+    title,
+    robots: q ? { index: false, follow: true } : undefined,
+  };
 }
 
 function fmt(n: number | null | undefined): string {

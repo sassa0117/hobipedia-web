@@ -94,9 +94,29 @@ export async function generateMetadata({
 }): Promise<Metadata> {
   const { ipShort } = await params;
   const ip = decodeURIComponent(ipShort);
+  const countRow = await prisma.$queryRawUnsafe<{ c: number }[]>(
+    `SELECT COUNT(*)::int as c FROM "CatalogItem" WHERE "ipShort" = $1`,
+    ip
+  );
+  const count = Number(countRow[0]?.c ?? 0);
+  const title = `${ip}のグッズ相場一覧（${count}件）`;
+  const description = `${ip}関連のアニメ・ホビーグッズ${count}件の相場・推移・出品情報を一覧で確認。駿河屋とメルカリsoldの実取引データから集計。`;
+  const url = `https://hobipedia.jp/ip/${ipShort}`;
   return {
-    title: `${ip}のグッズ相場一覧`,
-    description: `${ip}関連のアニメ・ホビーグッズの相場・推移・出品情報をまとめています。`,
+    title,
+    description,
+    alternates: { canonical: url },
+    openGraph: {
+      type: "website",
+      url,
+      title,
+      description,
+    },
+    twitter: {
+      card: "summary",
+      title,
+      description,
+    },
   };
 }
 
