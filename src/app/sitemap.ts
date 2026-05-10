@@ -1,10 +1,13 @@
 import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
+import { listArticles } from "@/lib/articles";
+
+export const revalidate = 21600;
 
 const BASE = "https://hobipedia.jp";
 
 export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
-  const [items, ips] = await Promise.all([
+  const [items, ips, articles] = await Promise.all([
     prisma.catalogItem.findMany({
       select: { id: true, updatedAt: true },
       orderBy: { updatedAt: "desc" },
@@ -14,6 +17,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
        FROM "CatalogItem" WHERE "ipShort" IS NOT NULL
        GROUP BY "ipShort"`
     ),
+    listArticles(),
   ]);
 
   const now = new Date();
@@ -21,12 +25,25 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   const staticUrls: MetadataRoute.Sitemap = [
     { url: BASE, lastModified: now, changeFrequency: "daily", priority: 1 },
     {
+      url: `${BASE}/articles`,
+      lastModified: now,
+      changeFrequency: "weekly",
+      priority: 0.8,
+    },
+    {
       url: `${BASE}/search`,
       lastModified: now,
       changeFrequency: "weekly",
       priority: 0.5,
     },
   ];
+
+  const articleUrls: MetadataRoute.Sitemap = articles.map((a) => ({
+    url: `${BASE}/articles/${a.slug}`,
+    lastModified: new Date(a.updatedAt ?? a.publishedAt),
+    changeFrequency: "monthly",
+    priority: 0.8,
+  }));
 
   const ipUrls: MetadataRoute.Sitemap = ips.map((r) => ({
     url: `${BASE}/ip/${encodeURIComponent(r.ipShort)}`,
@@ -42,5 +59,5 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: 0.6,
   }));
 
-  return [...staticUrls, ...ipUrls, ...itemUrls];
+  return [...staticUrls, ...articleUrls, ...ipUrls, ...itemUrls];
 }
