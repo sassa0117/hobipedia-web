@@ -2,7 +2,10 @@ import type { MetadataRoute } from "next";
 import { prisma } from "@/lib/prisma";
 import { listArticles } from "@/lib/articles";
 
-export const revalidate = 21600;
+// Generated on demand so build-time Neon outages don't fail deploys.
+// Vercel's edge cache + the inherent request-time DB hit keep this cheap
+// enough at ~11k URLs.
+export const dynamic = "force-dynamic";
 
 const BASE = "https://hobipedia.jp";
 
