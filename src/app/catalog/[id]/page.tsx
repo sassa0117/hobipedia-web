@@ -203,9 +203,6 @@ export default async function ItemPage({
   ]);
 
   const latest = snapshots[0] ?? null;
-  const soldPrices = soldRecords.map((r) => r.price);
-  const soldMin = soldPrices.length ? Math.min(...soldPrices) : null;
-  const soldMax = soldPrices.length ? Math.max(...soldPrices) : null;
   const soldCount = soldRecords.length;
 
   const links = buildAffiliateLinks(item.name, item.surugayaUrl);
@@ -387,29 +384,29 @@ export default async function ItemPage({
             {/* 3カード相場サマリー */}
             <div className="grid grid-cols-3 gap-2">
               <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="text-[10px] text-zinc-400 mb-1">最新相場</div>
+                <div className="text-[10px] text-zinc-400 mb-1">推定相場</div>
                 <div className="text-lg font-black text-sky-600">
                   {fmt(latest?.mercariMedian)}
                 </div>
-                <div className="text-[10px] text-zinc-400 mt-0.5">メルカリ</div>
+                <div className="text-[10px] text-zinc-400 mt-0.5">メルカリ中央値</div>
               </div>
               <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="text-[10px] text-zinc-400 mb-1">最安値</div>
-                <div className="text-lg font-black text-emerald-600">
-                  {fmt(soldMin)}
+                <div className="text-[10px] text-zinc-400 mb-1">駿河屋価格</div>
+                <div className="text-lg font-black text-amber-600">
+                  {fmt(latest?.surugayaPrice)}
                 </div>
               </div>
               <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-                <div className="text-[10px] text-zinc-400 mb-1">最高値</div>
-                <div className="text-lg font-black text-rose-600">
-                  {fmt(soldMax)}
+                <div className="text-[10px] text-zinc-400 mb-1">駿河屋との差</div>
+                <div className={`text-lg font-black ${colorForPct(latest?.diffPercent)}`}>
+                  {pct(latest?.diffPercent)}
                 </div>
               </div>
             </div>
 
-            {/* 7セル価格情報 */}
+            {/* 5セル価格情報 */}
             <SectionCard title="価格情報">
-              <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-7">
+              <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-5">
                 <PriceCell
                   label="メルカリ中央値"
                   value={fmt(latest?.mercariMedian)}
@@ -424,16 +421,6 @@ export default async function ItemPage({
                   label="定価"
                   value={fmt(item.listPrice)}
                   cls="text-zinc-800"
-                />
-                <PriceCell
-                  label="sold最安"
-                  value={fmt(soldMin)}
-                  cls="text-emerald-600"
-                />
-                <PriceCell
-                  label="sold最高"
-                  value={fmt(soldMax)}
-                  cls="text-rose-600"
                 />
                 <PriceCell
                   label="駿河屋との差"
