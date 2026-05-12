@@ -54,6 +54,22 @@ export default function RootLayout({
     >
       <body className="min-h-full flex flex-col bg-white text-zinc-900">
         {children}
+        <footer className="mt-12 border-t border-zinc-200 bg-white px-5 py-6 text-xs text-zinc-500">
+          <div className="mx-auto max-w-7xl space-y-2">
+            <div className="flex flex-wrap items-center gap-3 text-sm">
+              <span className="font-bold text-zinc-700">姉妹サイト</span>
+              <a
+                href="https://comic.hobipedia.jp"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sky-600 hover:underline"
+              >
+                初版コミック相場 — メルカリsoldで追う帯付き・シュリンク・鑑定品の中央値
+              </a>
+            </div>
+            <div>© {new Date().getFullYear()} Hobipedia</div>
+          </div>
+        </footer>
         <Script id="vc-linkswitch-pid" strategy="afterInteractive">
           {`var vc_pid = "892608852";`}
         </Script>
