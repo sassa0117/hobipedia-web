@@ -77,6 +77,7 @@ async function getTopData() {
       FROM "CatalogItem" ci
       JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
       WHERE ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
+        AND ps."createdAt" >= NOW() - INTERVAL '3 days'
         AND ps."trendDirection" IS NOT NULL AND ps."mercariMedian" >= 2000
       ORDER BY ps."trendDirection" DESC LIMIT 8
     `),
