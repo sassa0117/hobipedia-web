@@ -27,6 +27,15 @@ function toIso(d) {
   return new Date(d).toISOString();
 }
 
+// SQLite の datetime('now') 形式 "YYYY-MM-DD HH:MM:SS" に変換。
+// batch-gemini-match.mjs が geminiCheckedAt を SQLite datetime() で書いているため、
+// ISO8601 と文字列比較すると ASCII スペース(0x20) < T(0x54) で常に false 判定になる。
+// geminiCheckedAt 比較時はこちらを使う。
+function toSqliteDatetime(d) {
+  if (!d) return "1970-01-01 00:00:00";
+  return new Date(d).toISOString().replace("T", " ").replace(/\.\d{3}Z$/, "");
+}
+
 // 新規のみcreateMany skipDuplicates（PriceSnapshot/IpEvent向け、不変レコード用）
 async function appendNew(tableName, model, sqliteWhere, sqliteParams, transform) {
   const rows = sqlite.prepare(`SELECT * FROM ${tableName} WHERE ${sqliteWhere}`).all(...sqliteParams);
@@ -131,17 +140,18 @@ async function main() {
   const msLastCreate = (await prisma.mercariSoldRecord.aggregate({ _max: { createdAt: true } }))._max.createdAt;
   const msLastGemini = (await prisma.mercariSoldRecord.aggregate({ _max: { geminiCheckedAt: true } }))._max.geminiCheckedAt;
   // 早い方を採用（取りこぼし防止）
-  const msSince = toIso(
+  const msSinceDate =
     msLastCreate && msLastGemini
       ? new Date(Math.min(msLastCreate.getTime(), msLastGemini.getTime()))
-      : msLastCreate ?? msLastGemini
-  );
+      : msLastCreate ?? msLastGemini;
+  const msSinceIso = toIso(msSinceDate);          // createdAt 用（ISO8601）
+  const msSinceSqlite = toSqliteDatetime(msSinceDate); // geminiCheckedAt 用（SQLite datetime）
   await upsertDiff(
     "MercariSoldRecord",
     "mercariSoldRecord",
     (r) => ({ itemId_soldDate_price: { itemId: r.itemId, soldDate: r.soldDate, price: r.price } }),
     "createdAt > ? OR (geminiCheckedAt IS NOT NULL AND geminiCheckedAt > ?)",
-    [msSince, msSince],
+    [msSinceIso, msSinceSqlite],
     (r) => ({
       id: r.id,
       createdAt: toDate(r.createdAt),
