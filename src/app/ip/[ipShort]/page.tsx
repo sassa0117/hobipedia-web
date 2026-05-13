@@ -209,7 +209,7 @@ export default async function IpPage({
     <div className="min-h-screen bg-zinc-100">
       <SiteHeader />
 
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-8">
+      <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
         <nav className="text-sm text-zinc-500">
           <Link href="/" className="hover:underline">
             Hobipedia
@@ -323,31 +323,33 @@ export default async function IpPage({
           </section>
         )}
 
-        <section className="mt-6 flex items-center justify-between gap-3">
+        <section className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
           <h2 className="text-base font-semibold text-zinc-900">
             {stats.count.toLocaleString()}件
           </h2>
-          <div className="flex flex-wrap items-center gap-2 text-[12px]">
-            <span className="text-zinc-500">並び替え:</span>
-            {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
-              const active = activeSort === k;
-              return (
-                <Link
-                  key={k}
-                  href={buildHref(ipShort, {
-                    subcat: activeSubcat,
-                    sort: k,
-                  })}
-                  className={`rounded-full px-3 py-1 transition ${
-                    active
-                      ? "bg-zinc-800 text-white"
-                      : "bg-white text-zinc-600 hover:bg-zinc-50"
-                  }`}
-                >
-                  {SORT_LABEL[k]}
-                </Link>
-              );
-            })}
+          <div className="-mx-3 overflow-x-auto px-3 sm:mx-0 sm:overflow-visible sm:px-0">
+            <div className="flex w-max items-center gap-2 text-[12px] sm:w-auto sm:flex-wrap">
+              <span className="shrink-0 text-zinc-500">並び替え:</span>
+              {(Object.keys(SORT_LABEL) as SortKey[]).map((k) => {
+                const active = activeSort === k;
+                return (
+                  <Link
+                    key={k}
+                    href={buildHref(ipShort, {
+                      subcat: activeSubcat,
+                      sort: k,
+                    })}
+                    className={`shrink-0 rounded-full px-3 py-1 transition ${
+                      active
+                        ? "bg-zinc-800 text-white"
+                        : "bg-white text-zinc-600 hover:bg-zinc-50"
+                    }`}
+                  >
+                    {SORT_LABEL[k]}
+                  </Link>
+                );
+              })}
+            </div>
           </div>
         </section>
 

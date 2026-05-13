@@ -250,7 +250,7 @@ export default async function ItemPage({
       <SiteHeader />
 
       {/* ← 戻る サブバー */}
-      <div className="bg-sky-100 px-5 py-2 text-[13px]">
+      <div className="bg-sky-100 px-3 py-2 text-[13px] sm:px-5">
         <div className="mx-auto flex max-w-6xl items-center gap-3">
           <Link href={breadcrumbBack} className="text-sky-600 hover:underline">
             ← 戻る
@@ -259,7 +259,7 @@ export default async function ItemPage({
         </div>
       </div>
 
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-8">
+      <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
         <nav className="mb-4 text-[12px] text-zinc-500">
           <Link href="/" className="hover:underline">
             トップ
@@ -382,23 +382,23 @@ export default async function ItemPage({
             </div>
 
             {/* 3カード相場サマリー */}
-            <div className="grid grid-cols-3 gap-2">
-              <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+            <div className="grid grid-cols-3 gap-2 sm:gap-3">
+              <div className="rounded-xl bg-white p-2.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-3">
                 <div className="text-[10px] text-zinc-400 mb-1">推定相場</div>
-                <div className="text-lg font-black text-sky-600">
+                <div className="text-base font-black text-sky-600 tabular-nums sm:text-lg">
                   {fmt(latest?.mercariMedian)}
                 </div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">メルカリ中央値</div>
               </div>
-              <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+              <div className="rounded-xl bg-white p-2.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-3">
                 <div className="text-[10px] text-zinc-400 mb-1">駿河屋価格</div>
-                <div className="text-lg font-black text-amber-600">
+                <div className="text-base font-black text-amber-600 tabular-nums sm:text-lg">
                   {fmt(latest?.surugayaPrice)}
                 </div>
               </div>
-              <div className="rounded-xl bg-white p-3 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
+              <div className="rounded-xl bg-white p-2.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-3">
                 <div className="text-[10px] text-zinc-400 mb-1">駿河屋との差</div>
-                <div className={`text-lg font-black ${colorForPct(latest?.diffPercent)}`}>
+                <div className={`text-base font-black tabular-nums sm:text-lg ${colorForPct(latest?.diffPercent)}`}>
                   {pct(latest?.diffPercent)}
                 </div>
               </div>
@@ -531,10 +531,46 @@ export default async function ItemPage({
               </SectionCard>
             )}
 
-            {/* sold 詳細テーブル */}
+            {/* sold 詳細（モバイル=カード / sm以上=テーブル） */}
             {soldRecords.length > 0 && (
               <SectionCard title="相場履歴" noPad>
-                <div className="overflow-x-auto">
+                {/* モバイル: カードリスト */}
+                <ul className="divide-y divide-zinc-100 sm:hidden">
+                  {soldRecords.slice(0, 30).map((r) => (
+                    <li key={r.id} className="px-3 py-2.5">
+                      <div className="flex items-baseline justify-between gap-2">
+                        <span className="text-[11px] text-zinc-500 tabular-nums">
+                          {r.soldDate}
+                        </span>
+                        <span className="font-bold text-zinc-800 tabular-nums">
+                          {fmt(r.price)}
+                        </span>
+                      </div>
+                      <p className="mt-1 line-clamp-2 text-[12px] leading-snug text-zinc-600">
+                        {r.mercariName ?? "—"}
+                      </p>
+                      <div className="mt-1 flex items-center justify-between text-[11px] text-zinc-500">
+                        <span>
+                          {r.itemConditionId
+                            ? CONDITION_LABEL[r.itemConditionId] ?? "—"
+                            : "—"}
+                        </span>
+                        {r.mercariItemId && (
+                          <a
+                            href={`https://jp.mercari.com/item/${r.mercariItemId}?afid=${MERCARI_AMBASSADOR_ID}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-sky-600 hover:underline"
+                          >
+                            開く ↗
+                          </a>
+                        )}
+                      </div>
+                    </li>
+                  ))}
+                </ul>
+                {/* sm以上: 従来のテーブル */}
+                <div className="hidden overflow-x-auto sm:block">
                   <table className="w-full text-[13px]">
                     <thead>
                       <tr className="border-b border-zinc-200 text-[11px] text-zinc-500">

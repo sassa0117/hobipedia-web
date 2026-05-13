@@ -168,10 +168,13 @@ function StatBadge({
 }) {
   return (
     <div className="flex flex-col items-center">
-      <span className="text-3xl font-bold tabular-nums" style={{ color }}>
+      <span
+        className="text-2xl font-bold tabular-nums sm:text-3xl"
+        style={{ color }}
+      >
         {num.toLocaleString()}
       </span>
-      <span className="mt-1 text-xs text-zinc-400">{label}</span>
+      <span className="mt-1 text-[11px] text-zinc-400 sm:text-xs">{label}</span>
     </div>
   );
 }
@@ -207,7 +210,7 @@ function TrendRow({ item }: { item: ItemRow }) {
       className="flex items-center gap-2 border-b border-zinc-100 py-2.5 last:border-0 hover:bg-zinc-50"
     >
       <span
-        className={`min-w-[54px] rounded px-1.5 py-0.5 text-right text-[13px] font-bold ${
+        className={`shrink-0 min-w-[48px] rounded px-1.5 py-0.5 text-right text-[13px] font-bold tabular-nums ${
           td > 50
             ? "bg-emerald-50 text-emerald-600"
             : positive
@@ -218,14 +221,16 @@ function TrendRow({ item }: { item: ItemRow }) {
         {positive ? "+" : ""}
         {Math.round(td)}%
       </span>
-      <div className="ml-2 min-w-0 flex-1">
-        <p className="truncate text-[13px] text-zinc-700">{item.name}</p>
+      <div className="min-w-0 flex-1">
+        <p className="line-clamp-2 text-[13px] leading-snug text-zinc-700 sm:line-clamp-1 sm:truncate">
+          {item.name}
+        </p>
         <p className="truncate text-[11px] text-zinc-400">
           {item.ipShort}
           {item.limitedType ? ` · ${item.limitedType}` : ""}
         </p>
       </div>
-      <span className="shrink-0 text-[13px] text-zinc-600">
+      <span className="shrink-0 text-[13px] font-semibold text-zinc-700 tabular-nums">
         {item.mercariMedian ? `¥${item.mercariMedian.toLocaleString()}` : "—"}
       </span>
     </Link>
@@ -239,13 +244,15 @@ function HighValueRow({ item }: { item: ItemRow }) {
       className="flex items-center gap-3 border-b border-zinc-100 py-2.5 last:border-0 hover:bg-zinc-50"
     >
       <div className="min-w-0 flex-1">
-        <p className="truncate text-[13px] text-zinc-700">{item.name}</p>
+        <p className="line-clamp-2 text-[13px] leading-snug text-zinc-700 sm:line-clamp-1 sm:truncate">
+          {item.name}
+        </p>
         <p className="truncate text-[11px] text-zinc-400">
           {item.ipShort}
           {item.productType ? ` / ${item.productType}` : ""}
         </p>
       </div>
-      <span className="shrink-0 text-[15px] font-bold text-zinc-700">
+      <span className="shrink-0 text-[15px] font-bold text-zinc-700 tabular-nums">
         ¥{item.mercariMedian?.toLocaleString()}
       </span>
     </Link>
@@ -272,13 +279,17 @@ function EventRowEl({ ev, showDate }: { ev: EventRow; showDate?: boolean }) {
       ? `${ev.startDate} 〜 ${ev.endDate}`
       : ev.startDate;
   return (
-    <div className="flex items-center gap-1.5 border-b border-zinc-50 py-1.5 text-[13px] last:border-0">
-      <span>{EVENT_EMOJI[ev.eventType] || "📌"}</span>
-      <span className="text-[11px] text-zinc-400">{dateStr}</span>
-      <span className="font-medium text-sky-700">
-        {ev.ipShort || ev.ipTitle}
-      </span>
-      <span className="text-zinc-500">{ev.eventLabel}</span>
+    <div className="flex items-start gap-1.5 border-b border-zinc-50 py-2 text-[13px] last:border-0">
+      <span className="shrink-0 mt-0.5">{EVENT_EMOJI[ev.eventType] || "📌"}</span>
+      <div className="min-w-0 flex-1">
+        <p className="text-[11px] text-zinc-400">{dateStr}</p>
+        <p className="flex flex-wrap items-baseline gap-x-1.5 gap-y-0.5">
+          <span className="font-medium text-sky-700">
+            {ev.ipShort || ev.ipTitle}
+          </span>
+          <span className="text-zinc-500">{ev.eventLabel}</span>
+        </p>
+      </div>
     </div>
   );
 }
@@ -290,12 +301,12 @@ export default async function Home() {
     <div className="min-h-screen bg-zinc-100">
       <SiteHeader />
 
-      <main className="mx-auto max-w-6xl px-4 py-6 md:px-8">
-        <section className="rounded-2xl bg-sky-50 p-7 text-center">
+      <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
+        <section className="rounded-2xl bg-sky-50 p-5 text-center sm:p-7">
           <p className="text-sm font-semibold text-sky-500">
             アニメ・ホビーグッズの相場データベース
           </p>
-          <div className="mt-4 flex justify-center gap-10">
+          <div className="mt-4 flex justify-center gap-5 sm:gap-10">
             <StatBadge num={data.stats.items} label="商品" color="#6ec6e6" />
             <StatBadge num={data.stats.ips} label="作品" color="#8fd4c8" />
             <StatBadge

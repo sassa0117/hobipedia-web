@@ -53,13 +53,13 @@ export function ItemCard({
         <p className="line-clamp-2 text-[13px] leading-snug text-zinc-700">
           {name}
         </p>
-        <div className="mt-auto flex items-end justify-between gap-2 pt-1">
-          <span className="text-[15px] font-bold text-zinc-800">
+        <div className="mt-auto flex items-end justify-between gap-1.5 pt-1">
+          <span className="text-[15px] font-bold text-zinc-800 tabular-nums">
             {fmt(mercariMedian)}
           </span>
           {td != null && (
             <span
-              className={`text-[12px] font-bold ${
+              className={`shrink-0 text-[12px] font-bold tabular-nums ${
                 td > 0
                   ? "text-emerald-600"
                   : td < 0
