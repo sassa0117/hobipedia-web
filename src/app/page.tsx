@@ -82,12 +82,20 @@ async function getTopData() {
       ORDER BY ps."trendDirection" DESC LIMIT 8
     `),
     prisma.$queryRawUnsafe<ItemRow[]>(`
-      SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName", ci."limitedType",
+      WITH ranked AS (
+        SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName", ci."limitedType",
+          ci."createdAt",
+          ROW_NUMBER() OVER (PARTITION BY ci."ipShort" ORDER BY ci."createdAt" DESC) AS rn
+        FROM "CatalogItem" ci
+        WHERE ci."ipShort" IS NOT NULL
+      )
+      SELECT r.id, r.name, r."ipShort", r."productType", r."characterName", r."limitedType",
         ps."surugayaPrice", ps."mercariMedian", ps."trendDirection", ps."diffPercent"
-      FROM "CatalogItem" ci
-      LEFT JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
-        AND ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
-      ORDER BY ci."createdAt" DESC LIMIT 10
+      FROM ranked r
+      LEFT JOIN "PriceSnapshot" ps ON ps."itemId" = r.id
+        AND ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = r.id)
+      WHERE r.rn = 1
+      ORDER BY r."createdAt" DESC LIMIT 10
     `),
     prisma.$queryRawUnsafe<IpSummaryRow[]>(`
       SELECT
