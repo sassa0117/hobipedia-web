@@ -4,6 +4,8 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "../../_components/SiteHeader";
 import { ItemCard } from "../../_components/ItemCard";
+import { BackBar } from "../../_components/BackBar";
+import { SectionCard } from "../../_components/cards";
 import { classify, SUBCATEGORIES } from "@/lib/subcategories";
 
 export const dynamic = "force-dynamic";
@@ -209,12 +211,14 @@ export default async function IpPage({
     <div className="min-h-screen bg-zinc-100">
       <SiteHeader />
 
+      <BackBar href="/" label={ipShort} />
+
       <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
-        <nav className="text-sm text-zinc-500">
+        <nav className="mb-4 text-[12px] text-zinc-500">
           <Link href="/" className="hover:underline">
-            Hobipedia
+            トップ
           </Link>
-          <span className="mx-2">/</span>
+          <span className="mx-1.5">›</span>
           <Link
             href={`/ip/${encodeURIComponent(ipShort)}`}
             className="hover:underline"
@@ -223,13 +227,13 @@ export default async function IpPage({
           </Link>
           {activeSubcat && (
             <>
-              <span className="mx-2">/</span>
+              <span className="mx-1.5">›</span>
               <span className="text-zinc-700">{activeSubcat}</span>
             </>
           )}
         </nav>
 
-        <h1 className="mt-3 text-2xl font-bold text-zinc-900">
+        <h1 className="text-2xl font-bold text-zinc-900">
           {ipShort}のグッズ相場
           {activeSubcat && (
             <span className="ml-2 text-base text-sky-600">— {activeSubcat}</span>
@@ -281,46 +285,47 @@ export default async function IpPage({
         </section>
 
         {chips.length > 0 && (
-          <section className="mt-6">
-            <p className="mb-2 text-[12px] font-bold text-zinc-400">カテゴリ</p>
-            <div className="flex flex-wrap gap-2">
-              <Link
-                href={buildHref(ipShort, { subcat: null, sort: activeSort })}
-                className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
-                  activeSubcat == null
-                    ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
-                    : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
-                }`}
-              >
-                すべて
-                <span className="ml-1.5 text-[11px] text-zinc-400">
-                  {allItems.length}
-                </span>
-              </Link>
-              {chips.map(([label, count]) => {
-                const active = activeSubcat === label;
-                return (
-                  <Link
-                    key={label}
-                    href={buildHref(ipShort, {
-                      subcat: active ? null : label,
-                      sort: activeSort,
-                    })}
-                    className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
-                      active
-                        ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
-                        : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
-                    }`}
-                  >
-                    {label}
-                    <span className="ml-1.5 text-[11px] text-zinc-400">
-                      {count}
-                    </span>
-                  </Link>
-                );
-              })}
-            </div>
-          </section>
+          <div className="mt-6">
+            <SectionCard title="カテゴリ">
+              <div className="flex flex-wrap gap-2">
+                <Link
+                  href={buildHref(ipShort, { subcat: null, sort: activeSort })}
+                  className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
+                    activeSubcat == null
+                      ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
+                      : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
+                  }`}
+                >
+                  すべて
+                  <span className="ml-1.5 text-[11px] text-zinc-400">
+                    {allItems.length}
+                  </span>
+                </Link>
+                {chips.map(([label, count]) => {
+                  const active = activeSubcat === label;
+                  return (
+                    <Link
+                      key={label}
+                      href={buildHref(ipShort, {
+                        subcat: active ? null : label,
+                        sort: activeSort,
+                      })}
+                      className={`rounded-full border px-3.5 py-1.5 text-[13px] transition ${
+                        active
+                          ? "border-sky-400 bg-sky-100 font-semibold text-sky-700"
+                          : "border-zinc-200 bg-white text-zinc-600 hover:border-sky-200"
+                      }`}
+                    >
+                      {label}
+                      <span className="ml-1.5 text-[11px] text-zinc-400">
+                        {count}
+                      </span>
+                    </Link>
+                  );
+                })}
+              </div>
+            </SectionCard>
+          </div>
         )}
 
         <section className="mt-6 flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">

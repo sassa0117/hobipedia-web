@@ -2,6 +2,8 @@ import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { SiteHeader } from "../_components/SiteHeader";
+import { BackBar } from "../_components/BackBar";
+import { SectionCard } from "../_components/cards";
 
 export const dynamic = "force-dynamic";
 
@@ -144,17 +146,19 @@ export default async function SearchPage({
     <div className="min-h-screen bg-zinc-100">
       <SiteHeader defaultQuery={q} />
 
-      <main className="mx-auto max-w-4xl px-4 py-6 md:px-8">
-        <nav className="text-sm text-zinc-500">
+      <BackBar href="/" label="検索" />
+
+      <main className="mx-auto max-w-4xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
+        <nav className="mb-4 text-[12px] text-zinc-500">
           <Link href="/" className="hover:underline">
-            Hobipedia
+            トップ
           </Link>
-          <span className="mx-2">/</span>
+          <span className="mx-1.5">›</span>
           <span className="text-zinc-700">検索</span>
         </nav>
 
         {q.length === 0 ? (
-          <div className="mt-8 rounded-xl bg-white p-8 text-center">
+          <div className="rounded-xl bg-white p-8 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
             <p className="text-sm text-zinc-500">
               上の検索バーから作品名・商品名・キャラ名を入力してください。
             </p>
@@ -171,14 +175,13 @@ async function SearchResults({ q }: { q: string }) {
   const { items, truncated, ipHits } = await runSearch(q);
 
   return (
-    <>
-      <h1 className="mt-3 text-xl font-bold text-zinc-900">
+    <div className="space-y-4">
+      <h1 className="text-xl font-bold text-zinc-900">
         「{q}」の検索結果（{items.length}件{truncated ? "+" : ""}）
       </h1>
 
       {ipHits.length > 0 && (
-        <section className="mt-5">
-          <p className="mb-2 text-[12px] font-bold text-zinc-400">作品で絞り込む</p>
+        <SectionCard title="作品で絞り込む">
           <div className="flex flex-wrap gap-2">
             {ipHits.map((h) => (
               <Link
@@ -193,23 +196,23 @@ async function SearchResults({ q }: { q: string }) {
               </Link>
             ))}
           </div>
-        </section>
+        </SectionCard>
       )}
 
       {items.length === 0 ? (
-        <div className="mt-8 rounded-xl bg-white p-8 text-center">
+        <div className="rounded-xl bg-white p-8 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
           <p className="text-sm text-zinc-500">該当する商品が見つかりませんでした。</p>
           <p className="mt-2 text-[12px] text-zinc-400">
             別のキーワードでお試しください。
           </p>
         </div>
       ) : (
-        <section className="mt-5 overflow-hidden rounded-xl bg-white shadow-[0_1px_6px_rgba(0,0,0,0.04)]">
+        <SectionCard noPad>
           {items.map((item) => (
             <ResultRow key={item.id} item={item} />
           ))}
-        </section>
+        </SectionCard>
       )}
-    </>
+    </div>
   );
 }

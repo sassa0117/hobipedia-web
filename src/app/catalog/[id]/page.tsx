@@ -4,6 +4,13 @@ import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
 import { listArticlesForCatalog } from "@/lib/articles";
 import { SiteHeader } from "../../_components/SiteHeader";
+import { BackBar } from "../../_components/BackBar";
+import {
+  SectionCard,
+  PriceCell,
+  BrandButton,
+  InfoRow,
+} from "../../_components/cards";
 
 export const dynamic = "force-dynamic";
 
@@ -249,15 +256,7 @@ export default async function ItemPage({
       />
       <SiteHeader />
 
-      {/* ← 戻る サブバー */}
-      <div className="bg-sky-100 px-3 py-2 text-[13px] sm:px-5">
-        <div className="mx-auto flex max-w-6xl items-center gap-3">
-          <Link href={breadcrumbBack} className="text-sky-600 hover:underline">
-            ← 戻る
-          </Link>
-          <span className="font-semibold text-sky-700">グッズカタログ</span>
-        </div>
-      </div>
+      <BackBar href={breadcrumbBack} label="グッズカタログ" />
 
       <main className="mx-auto max-w-6xl px-3 py-5 sm:px-4 sm:py-6 md:px-8">
         <nav className="mb-4 text-[12px] text-zinc-500">
@@ -835,84 +834,3 @@ function splitSegments(values: (string | null)[]): string[] {
   return segs;
 }
 
-function SectionCard({
-  title,
-  children,
-  noPad,
-  noHeader,
-}: {
-  title?: string;
-  children: React.ReactNode;
-  noPad?: boolean;
-  noHeader?: boolean;
-}) {
-  return (
-    <section className="overflow-hidden rounded-xl bg-white shadow-[0_1px_4px_rgba(0,0,0,0.04)]">
-      {!noHeader && title && (
-        <header className="border-l-[3px] border-sky-300 border-b border-zinc-100 px-4 py-2.5">
-          <h2 className="text-[13px] font-bold text-zinc-700">{title}</h2>
-        </header>
-      )}
-      <div className={noPad ? "" : "p-4"}>{children}</div>
-    </section>
-  );
-}
-
-function PriceCell({
-  label,
-  value,
-  cls,
-  suffix,
-}: {
-  label: string;
-  value: string;
-  cls: string;
-  suffix?: string;
-}) {
-  return (
-    <div>
-      <p className="text-[10px] text-zinc-400">{label}</p>
-      <p className={`mt-0.5 text-base font-bold tabular-nums ${cls}`}>
-        {value}
-        {suffix && (
-          <span className="ml-0.5 text-[11px] font-normal text-amber-500">
-            {suffix}
-          </span>
-        )}
-      </p>
-    </div>
-  );
-}
-
-function BrandButton({
-  href,
-  label,
-  bg,
-}: {
-  href: string;
-  label: string;
-  bg: string;
-}) {
-  return (
-    <a
-      href={href}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="flex items-center justify-between rounded-lg px-4 py-2.5 text-[13px] font-bold text-white"
-      style={{ background: bg }}
-    >
-      <span>{label}</span>
-      <span className="text-xs opacity-80">↗</span>
-    </a>
-  );
-}
-
-function InfoRow({ label, value }: { label: string; value: string | null }) {
-  if (!value) return null;
-  return (
-    <div className="flex justify-between items-start gap-2 border-b border-zinc-100 py-1 last:border-0">
-      <dt className="shrink-0 text-zinc-400">{label}</dt>
-      <dd className="text-right text-zinc-700">{value}</dd>
-    </div>
-  );
-}
