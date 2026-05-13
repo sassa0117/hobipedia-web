@@ -406,38 +406,54 @@ export default async function ItemPage({
 
             {/* 5セル価格情報 */}
             <SectionCard title="価格情報">
-              <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-5">
-                <PriceCell
-                  label="メルカリ中央値"
-                  value={fmt(latest?.mercariMedian)}
-                  cls="text-sky-600"
-                />
-                <PriceCell
-                  label="駿河屋価格"
-                  value={fmt(latest?.surugayaPrice)}
-                  cls="text-amber-600"
-                />
-                <PriceCell
-                  label="定価"
-                  value={fmt(item.listPrice)}
-                  cls="text-zinc-800"
-                />
-                <PriceCell
-                  label="駿河屋との差"
-                  value={pct(latest?.diffPercent)}
-                  cls={colorForPct(latest?.diffPercent)}
-                />
-                <PriceCell
-                  label="推移"
-                  value={pct(latest?.trendDirection)}
-                  cls={colorForPct(latest?.trendDirection)}
-                />
-              </div>
-              <p className="mt-3 text-[11px] text-zinc-400">
-                {soldCount > 0
-                  ? `メルカリsold ${soldCount}件のデータに基づく`
-                  : "メルカリsoldデータはまだありません"}
-              </p>
+              {(() => {
+                const LOW_SAMPLE = 20;
+                const lowSample = soldCount > 0 && soldCount < LOW_SAMPLE;
+                return (
+                  <>
+                    <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-5">
+                      <PriceCell
+                        label="メルカリ中央値"
+                        value={fmt(latest?.mercariMedian)}
+                        cls="text-sky-600"
+                        suffix={lowSample ? "*" : undefined}
+                      />
+                      <PriceCell
+                        label="駿河屋価格"
+                        value={fmt(latest?.surugayaPrice)}
+                        cls="text-amber-600"
+                      />
+                      <PriceCell
+                        label="定価"
+                        value={fmt(item.listPrice)}
+                        cls="text-zinc-800"
+                      />
+                      <PriceCell
+                        label="駿河屋との差"
+                        value={pct(latest?.diffPercent)}
+                        cls={colorForPct(latest?.diffPercent)}
+                        suffix={lowSample ? "*" : undefined}
+                      />
+                      <PriceCell
+                        label="推移"
+                        value={pct(latest?.trendDirection)}
+                        cls={colorForPct(latest?.trendDirection)}
+                        suffix={lowSample ? "*" : undefined}
+                      />
+                    </div>
+                    <p className="mt-3 text-[11px] text-zinc-400">
+                      {soldCount > 0
+                        ? `メルカリsold ${soldCount}件のデータに基づく`
+                        : "メルカリsoldデータはまだありません"}
+                    </p>
+                    {lowSample && (
+                      <p className="mt-1 text-[11px] text-amber-600">
+                        * サンプル数{LOW_SAMPLE}件未満のため参考値（外れ値1件で大きく変動します）
+                      </p>
+                    )}
+                  </>
+                );
+              })()}
             </SectionCard>
 
             {/* 価格推移グラフ */}
@@ -846,15 +862,24 @@ function PriceCell({
   label,
   value,
   cls,
+  suffix,
 }: {
   label: string;
   value: string;
   cls: string;
+  suffix?: string;
 }) {
   return (
     <div>
       <p className="text-[10px] text-zinc-400">{label}</p>
-      <p className={`mt-0.5 text-base font-bold tabular-nums ${cls}`}>{value}</p>
+      <p className={`mt-0.5 text-base font-bold tabular-nums ${cls}`}>
+        {value}
+        {suffix && (
+          <span className="ml-0.5 text-[11px] font-normal text-amber-500">
+            {suffix}
+          </span>
+        )}
+      </p>
     </div>
   );
 }

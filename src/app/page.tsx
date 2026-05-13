@@ -405,38 +405,67 @@ export default async function Home() {
         </div>
 
         <Card title="カテゴリポータル" accent="#6ec6e6">
-          <p className="mb-2 text-[12px] font-bold text-zinc-400">作品別</p>
-          <div className="flex flex-wrap gap-2">
-            {data.ipSummary.map((ip) => (
-              <Link
-                key={ip.ip}
-                href={`/ip/${encodeURIComponent(ip.ip)}`}
-                className="flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3.5 py-1.5"
-              >
-                <span className="text-[13px] font-medium text-sky-700">
-                  {ip.ip}
-                </span>
-                <span className="text-[11px] text-sky-300">
-                  {ip.itemCount}
-                </span>
-              </Link>
-            ))}
-          </div>
+          {(() => {
+            const EXCLUDED_IPS = new Set([
+              "プリキュア横断",
+              "プリキュア変身玩具",
+              "プリキュアリボン",
+            ]);
+            const IP_MIN = 10;
+            const TYPE_MIN = 20;
+            const ips = data.ipSummary.filter(
+              (ip) => ip.itemCount >= IP_MIN && !EXCLUDED_IPS.has(ip.ip)
+            );
+            const types = data.typeDist.filter((t) => t.count >= TYPE_MIN);
+            return (
+              <>
+                <div className="mb-2 flex items-baseline gap-2">
+                  <p className="text-[12px] font-bold text-zinc-400">作品別</p>
+                  <p className="text-[10px] text-zinc-300">
+                    {IP_MIN}件以上を表示（全{data.ipSummary.length}作品中{ips.length}件）
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {ips.map((ip) => (
+                    <Link
+                      key={ip.ip}
+                      href={`/ip/${encodeURIComponent(ip.ip)}`}
+                      className="flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3.5 py-1.5"
+                    >
+                      <span className="text-[13px] font-medium text-sky-700">
+                        {ip.ip}
+                      </span>
+                      <span className="text-[11px] text-sky-300 tabular-nums">
+                        {ip.itemCount}
+                      </span>
+                    </Link>
+                  ))}
+                </div>
 
-          <p className="mt-5 mb-2 text-[12px] font-bold text-zinc-400">商品種別</p>
-          <div className="flex flex-wrap gap-2">
-            {data.typeDist.map((t) => (
-              <span
-                key={t.productType}
-                className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5"
-              >
-                <span className="text-[12px] text-stone-500">
-                  {t.productType}
-                </span>
-                <span className="text-[11px] text-stone-300">{t.count}</span>
-              </span>
-            ))}
-          </div>
+                <div className="mt-5 mb-2 flex items-baseline gap-2">
+                  <p className="text-[12px] font-bold text-zinc-400">商品種別</p>
+                  <p className="text-[10px] text-zinc-300">
+                    {TYPE_MIN}件以上を表示（全{data.typeDist.length}種別中{types.length}件）
+                  </p>
+                </div>
+                <div className="flex flex-wrap gap-2">
+                  {types.map((t) => (
+                    <span
+                      key={t.productType}
+                      className="flex items-center gap-1.5 rounded-full border border-stone-200 bg-stone-50 px-3 py-1.5"
+                    >
+                      <span className="text-[12px] text-stone-500">
+                        {t.productType}
+                      </span>
+                      <span className="text-[11px] text-stone-300 tabular-nums">
+                        {t.count}
+                      </span>
+                    </span>
+                  ))}
+                </div>
+              </>
+            );
+          })()}
         </Card>
 
         <div className="mt-6">
