@@ -273,8 +273,8 @@ function SimpleRow({ item }: { item: ItemRow }) {
       href={`/catalog/${item.id}`}
       className="flex items-center gap-2 border-b border-zinc-50 py-1.5 last:border-0 hover:bg-zinc-50"
     >
-      <span className="text-[11px] text-zinc-400">{item.ipShort ?? "—"}</span>
-      <span className="flex-1 truncate text-[13px] text-zinc-600">
+      <span className="shrink-0 text-[11px] text-zinc-400">{item.ipShort ?? "—"}</span>
+      <span className="min-w-0 flex-1 truncate text-[13px] text-zinc-600">
         {item.name}
       </span>
     </Link>
@@ -325,7 +325,7 @@ export default async function Home() {
           </div>
         </section>
 
-        <div className="mt-6 grid gap-6 md:grid-cols-2">
+        <div className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2">
           <div className="space-y-6">
             <Card title="今日の急上昇" accent="#4caf50">
               {data.rising.length === 0 ? (
