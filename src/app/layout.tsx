@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
 import "./globals.css";
+import { LinkClickTracker } from "./_components/LinkClickTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -70,6 +71,7 @@ export default function RootLayout({
             <div>© {new Date().getFullYear()} Hobipedia</div>
           </div>
         </footer>
+        <LinkClickTracker />
         <Script id="vc-linkswitch-pid" strategy="afterInteractive">
           {`var vc_pid = "892608852";`}
         </Script>

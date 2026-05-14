@@ -53,16 +53,25 @@ export function BrandButton({
   href,
   label,
   bg,
+  ec,
+  rank,
+  section = "brand-buttons",
 }: {
   href: string;
   label: string;
   bg: string;
+  ec?: string;
+  rank?: number;
+  section?: string;
 }) {
   return (
     <a
       href={href}
       target="_blank"
       rel="noopener noreferrer"
+      data-ec={ec}
+      data-rank={rank}
+      data-section={section}
       className="flex items-center justify-between rounded-lg px-4 py-2.5 text-[13px] font-bold text-white"
       style={{ background: bg }}
     >

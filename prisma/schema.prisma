@@ -224,3 +224,21 @@ model MercariSoldRecord {
   @@index([soldDate])
   @@index([geminiCheckedAt])
 }
+
+// 外部リンク・sold ギャラリーのクリック記録（hobipedia-web 内のみで完結）。
+// catalog/[id] の 11 ボタンと sold ギャラリーから sendBeacon で書き込み、
+// 後で EC 別・rank 別の click 分布を見て削減・並び替えの判断材料にする。
+model LinkClickEvent {
+  id        String   @id @default(cuid())
+  createdAt DateTime @default(now())
+
+  ec        String   // "mercari" / "amazon" / "rakuten" / "surugaya" / "yahoo-shopping" / "yahoo-auction" / "paypay-fleamarket" / "animate" / "pbandai" / "mandarake" / "lashinban" / "mercari-sold"
+  section   String   // "brand-buttons" | "sold-gallery"
+  rank      Int?     // 表示順 (BrandButton: 0-10, sold-gallery: 0..n)
+  itemId    String?  // CatalogItem.id（URL から取れる時）
+  ipShort   String?
+  userAgent String?
+
+  @@index([ec, createdAt])
+  @@index([itemId])
+}

@@ -465,17 +465,17 @@ export default async function ItemPage({
             {/* 今買えるところ（11ボタン） */}
             <SectionCard title="今買えるところ">
               <div className="grid grid-cols-2 gap-2">
-                <BrandButton href={links.mercari} label="メルカリで探す" bg="#ff4655" />
-                <BrandButton href={links.amazon} label="Amazonで探す" bg="#ff9900" />
-                <BrandButton href={links.rakuten} label="楽天で探す" bg="#bf0000" />
-                <BrandButton href={links.surugaya} label="駿河屋で見る" bg="#333333" />
-                <BrandButton href={links.yahooShopping} label="Yahoo!ショッピング" bg="#ff0033" />
-                <BrandButton href={links.yahooAuction} label="ヤフオク" bg="#7b0099" />
-                <BrandButton href={links.paypayFleamarket} label="Yahoo!フリマ" bg="#ff0033" />
-                <BrandButton href={links.animate} label="アニメイト" bg="#0099d4" />
-                <BrandButton href={links.pbandai} label="プレバン" bg="#d70a18" />
-                <BrandButton href={links.mandarake} label="まんだらけ" bg="#003e80" />
-                <BrandButton href={links.lashinban} label="らしんばん" bg="#ed1c24" />
+                <BrandButton href={links.mercari} label="メルカリで探す" bg="#ff4655" ec="mercari" rank={0} />
+                <BrandButton href={links.amazon} label="Amazonで探す" bg="#ff9900" ec="amazon" rank={1} />
+                <BrandButton href={links.rakuten} label="楽天で探す" bg="#bf0000" ec="rakuten" rank={2} />
+                <BrandButton href={links.surugaya} label="駿河屋で見る" bg="#333333" ec="surugaya" rank={3} />
+                <BrandButton href={links.yahooShopping} label="Yahoo!ショッピング" bg="#ff0033" ec="yahoo-shopping" rank={4} />
+                <BrandButton href={links.yahooAuction} label="ヤフオク" bg="#7b0099" ec="yahoo-auction" rank={5} />
+                <BrandButton href={links.paypayFleamarket} label="Yahoo!フリマ" bg="#ff0033" ec="paypay-fleamarket" rank={6} />
+                <BrandButton href={links.animate} label="アニメイト" bg="#0099d4" ec="animate" rank={7} />
+                <BrandButton href={links.pbandai} label="プレバン" bg="#d70a18" ec="pbandai" rank={8} />
+                <BrandButton href={links.mandarake} label="まんだらけ" bg="#003e80" ec="mandarake" rank={9} />
+                <BrandButton href={links.lashinban} label="らしんばん" bg="#ed1c24" ec="lashinban" rank={10} />
               </div>
               <p className="mt-3 text-[11px] text-zinc-400">
                 ※外部リンク。Mercari/Amazon/楽天はアフィリエイト。Yahoo系・楽天はValueCommerce LinkSwitchで自動アフィリ化。
@@ -501,7 +501,7 @@ export default async function ItemPage({
             {soldRecords.length > 0 && (
               <SectionCard title={`メルカリ sold 履歴（${soldRecords.length}件）`}>
                 <div className="grid grid-cols-3 gap-3 sm:grid-cols-4">
-                  {soldRecords.slice(0, 12).map((r) => (
+                  {soldRecords.slice(0, 12).map((r, idx) => (
                     <a
                       key={r.id}
                       href={
@@ -511,6 +511,9 @@ export default async function ItemPage({
                       }
                       target="_blank"
                       rel="noopener noreferrer"
+                      data-ec="mercari-sold"
+                      data-rank={idx}
+                      data-section="sold-gallery"
                       className="group block"
                     >
                       <div className="relative aspect-square overflow-hidden rounded-lg bg-zinc-100">
@@ -551,7 +554,7 @@ export default async function ItemPage({
               <SectionCard title="相場履歴" noPad>
                 {/* モバイル: カードリスト */}
                 <ul className="divide-y divide-zinc-100 sm:hidden">
-                  {soldRecords.slice(0, 30).map((r) => (
+                  {soldRecords.slice(0, 30).map((r, idx) => (
                     <li key={r.id} className="px-3 py-2.5">
                       <div className="flex items-baseline justify-between gap-2">
                         <span className="text-[11px] text-zinc-500 tabular-nums">
@@ -575,6 +578,9 @@ export default async function ItemPage({
                             href={`https://jp.mercari.com/item/${r.mercariItemId}?afid=${MERCARI_AMBASSADOR_ID}`}
                             target="_blank"
                             rel="noopener noreferrer"
+                            data-ec="mercari-sold"
+                            data-rank={idx}
+                            data-section="sold-table"
                             className="text-sky-600 hover:underline"
                           >
                             開く ↗
@@ -597,7 +603,7 @@ export default async function ItemPage({
                       </tr>
                     </thead>
                     <tbody className="font-mono">
-                      {soldRecords.slice(0, 30).map((r) => (
+                      {soldRecords.slice(0, 30).map((r, idx) => (
                         <tr
                           key={r.id}
                           className="border-b border-zinc-100 last:border-0"
@@ -624,6 +630,9 @@ export default async function ItemPage({
                                 href={`https://jp.mercari.com/item/${r.mercariItemId}?afid=${MERCARI_AMBASSADOR_ID}`}
                                 target="_blank"
                                 rel="noopener noreferrer"
+                                data-ec="mercari-sold"
+                                data-rank={idx}
+                                data-section="sold-table"
                                 className="text-[11px] text-sky-600 hover:underline"
                               >
                                 開く ↗
