@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { buildIpPath } from "@/lib/ip-path";
 import { SiteHeader } from "../_components/SiteHeader";
 import { BackBar } from "../_components/BackBar";
 import { SectionCard } from "../_components/cards";
@@ -186,7 +187,7 @@ async function SearchResults({ q }: { q: string }) {
             {ipHits.map((h) => (
               <Link
                 key={h.ipShort}
-                href={`/ip/${encodeURIComponent(h.ipShort)}`}
+                href={buildIpPath(h.ipShort)}
                 className="flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3.5 py-1.5"
               >
                 <span className="text-[13px] font-medium text-sky-700">

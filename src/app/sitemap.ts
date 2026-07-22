@@ -1,5 +1,7 @@
 import type { MetadataRoute } from "next";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { buildIpCanonicalUrl } from "@/lib/ip-path";
 import { ARTICLES_PER_PAGE, listArticles } from "@/lib/articles";
 
 // Generated on demand so build-time Neon outages don't fail deploys.
@@ -9,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const BASE = "https://hobipedia.jp";
 
-export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
+const getSitemap = unstable_cache(async function getSitemap(): Promise<MetadataRoute.Sitemap> {
   const [items, ips, articles] = await Promise.all([
     prisma.catalogItem.findMany({
       select: { id: true, updatedAt: true },
@@ -63,7 +65,7 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
   }
 
   const ipUrls: MetadataRoute.Sitemap = ips.map((r) => ({
-    url: `${BASE}/ip/${encodeURIComponent(r.ipShort)}`,
+    url: buildIpCanonicalUrl(r.ipShort),
     lastModified: r.lastSeen ?? now,
     changeFrequency: "weekly",
     priority: 0.7,
@@ -83,4 +85,8 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     ...ipUrls,
     ...itemUrls,
   ];
+}, ["sitemap-v1"], { revalidate: 86400 });
+
+export default function sitemap(): Promise<MetadataRoute.Sitemap> {
+  return getSitemap();
 }

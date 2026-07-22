@@ -1,5 +1,7 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
+import { buildIpPath } from "@/lib/ip-path";
 import { SiteHeader } from "./_components/SiteHeader";
 
 export const dynamic = "force-dynamic";
@@ -13,6 +15,8 @@ type ItemRow = {
   limitedType: string | null;
   surugayaPrice: number | null;
   mercariMedian: number | null;
+  mercariCount: number | null;
+  snapshotAt: Date | null;
   trendDirection: number | null;
   diffPercent: number | null;
 };
@@ -43,7 +47,7 @@ const EVENT_EMOJI: Record<string, string> = {
   collaboration: "🤝",
 };
 
-async function getTopData() {
+const getTopData = unstable_cache(async function getTopData() {
   const today = new Date();
   const todayStr = today.toISOString().slice(0, 10);
   const mmdd = `${String(today.getMonth() + 1).padStart(2, "0")}-${String(
@@ -73,12 +77,14 @@ async function getTopData() {
     prisma.priceSnapshot.count(),
     prisma.$queryRawUnsafe<ItemRow[]>(`
       SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName", ci."limitedType",
-        ps."surugayaPrice", ps."mercariMedian", ps."trendDirection", ps."diffPercent"
+        ps."surugayaPrice", ps."mercariMedian", ps."mercariCount",
+        ps."createdAt" AS "snapshotAt", ps."trendDirection", ps."diffPercent"
       FROM "CatalogItem" ci
       JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
       WHERE ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
         AND ps."createdAt" >= NOW() - INTERVAL '3 days'
         AND ps."trendDirection" IS NOT NULL AND ps."mercariMedian" >= 2000
+        AND ps."mercariCount" >= 4
       ORDER BY ps."trendDirection" DESC LIMIT 8
     `),
     prisma.$queryRawUnsafe<ItemRow[]>(`
@@ -90,7 +96,8 @@ async function getTopData() {
         WHERE ci."ipShort" IS NOT NULL
       )
       SELECT r.id, r.name, r."ipShort", r."productType", r."characterName", r."limitedType",
-        ps."surugayaPrice", ps."mercariMedian", ps."trendDirection", ps."diffPercent"
+        ps."surugayaPrice", ps."mercariMedian", ps."mercariCount",
+        ps."createdAt" AS "snapshotAt", ps."trendDirection", ps."diffPercent"
       FROM ranked r
       LEFT JOIN "PriceSnapshot" ps ON ps."itemId" = r.id
         AND ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = r.id)
@@ -135,13 +142,26 @@ async function getTopData() {
       GROUP BY "productType" ORDER BY count DESC
     `),
     prisma.$queryRawUnsafe<ItemRow[]>(`
-      SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName", ci."limitedType",
-        ps."surugayaPrice", ps."mercariMedian", ps."trendDirection", ps."diffPercent"
-      FROM "CatalogItem" ci
-      JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
-      WHERE ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
-        AND ps."mercariMedian" IS NOT NULL
-      ORDER BY ps."mercariMedian" DESC LIMIT 5
+      WITH latest AS (
+        SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName", ci."limitedType",
+          ps."surugayaPrice", ps."mercariMedian", ps."mercariCount",
+          ps."createdAt" AS "snapshotAt", ps."trendDirection", ps."diffPercent"
+        FROM "CatalogItem" ci
+        JOIN "PriceSnapshot" ps ON ps."itemId" = ci.id
+        WHERE ps."createdAt" = (SELECT MAX("createdAt") FROM "PriceSnapshot" WHERE "itemId" = ci.id)
+          AND ps."mercariMedian" IS NOT NULL
+      ), ranked AS (
+        SELECT *, ROW_NUMBER() OVER (
+          PARTITION BY name, "ipShort", "productType", "characterName", "limitedType"
+          ORDER BY "mercariCount" DESC, "snapshotAt" DESC, id
+        ) AS rn
+        FROM latest
+      )
+      SELECT id, name, "ipShort", "productType", "characterName", "limitedType",
+        "surugayaPrice", "mercariMedian", "mercariCount", "snapshotAt",
+        "trendDirection", "diffPercent"
+      FROM ranked WHERE rn = 1
+      ORDER BY "mercariMedian" DESC LIMIT 5
     `),
   ]);
 
@@ -163,7 +183,7 @@ async function getTopData() {
     typeDist: typeDist.map((r) => ({ ...r, count: Number(r.count) })),
     highValue,
   };
-}
+}, ["home-top-data-v1"], { revalidate: 21600 });
 
 function StatBadge({
   num,
@@ -236,6 +256,10 @@ function TrendRow({ item }: { item: ItemRow }) {
         <p className="truncate text-[11px] text-zinc-400">
           {item.ipShort}
           {item.limitedType ? ` · ${item.limitedType}` : ""}
+        </p>
+        <p className="truncate text-[10px] text-zinc-400">
+          sold {item.mercariCount ?? 0}件 · 直近7〜14日と過去15日以前を比較 ·
+          更新 {item.snapshotAt ? new Date(item.snapshotAt).toLocaleDateString("ja-JP") : "—"}
         </p>
       </div>
       <span className="shrink-0 text-[13px] font-semibold text-zinc-700 tabular-nums">
@@ -394,11 +418,6 @@ export default async function Home() {
               )}
             </Card>
 
-            <Card title="季節の注目" accent="#8fd4c8">
-              <p className="py-2 text-[13px] text-zinc-300">
-                季節ごとの高騰傾向データを蓄積中...
-              </p>
-            </Card>
 
             <Card title="インフォメーション" accent="#90a4ae">
               <p className="text-[13px] leading-7 text-zinc-500">
@@ -437,7 +456,7 @@ export default async function Home() {
                   {ips.map((ip) => (
                     <Link
                       key={ip.ip}
-                      href={`/ip/${encodeURIComponent(ip.ip)}`}
+                      href={buildIpPath(ip.ip)}
                       className="flex items-center gap-1.5 rounded-full border border-sky-100 bg-sky-50 px-3.5 py-1.5"
                     >
                       <span className="text-[13px] font-medium text-sky-700">
@@ -476,11 +495,6 @@ export default async function Home() {
           })()}
         </Card>
 
-        <div className="mt-6">
-          <Card title="関連プロジェクト" accent="#90a4ae">
-            <p className="py-2 text-[13px] text-zinc-300">準備中</p>
-          </Card>
-        </div>
       </main>
     </div>
   );

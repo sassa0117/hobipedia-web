@@ -2,6 +2,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { buildIpPath } from "@/lib/ip-path";
 import { listArticlesForCatalog } from "@/lib/articles";
 import { SiteHeader } from "../../_components/SiteHeader";
 import { BackBar } from "../../_components/BackBar";
@@ -214,7 +215,7 @@ export default async function ItemPage({
 
   const links = buildAffiliateLinks(item.name, item.surugayaUrl);
   const breadcrumbBack = item.ipShort
-    ? `/ip/${encodeURIComponent(item.ipShort)}`
+    ? buildIpPath(item.ipShort)
     : "/";
 
   const chartPoints = buildChartPoints(snapshots, soldRecords);
@@ -267,7 +268,7 @@ export default async function ItemPage({
             <>
               <span className="mx-1.5">›</span>
               <Link
-                href={`/ip/${encodeURIComponent(item.ipShort)}`}
+                href={buildIpPath(item.ipShort)}
                 className="hover:underline"
               >
                 {item.ipShort}
@@ -300,35 +301,6 @@ export default async function ItemPage({
                 ) : (
                   <p className="text-[12px] text-zinc-300">画像なし</p>
                 )}
-              </div>
-            </SectionCard>
-
-            <SectionCard noHeader>
-              <div className="p-1 space-y-2">
-                <button
-                  type="button"
-                  disabled
-                  className="w-full rounded-lg bg-sky-300 text-white text-[13px] font-bold py-2 cursor-not-allowed"
-                  title="相場報告は今後の認証機能と一緒に実装"
-                >
-                  相場を報告する（準備中）
-                </button>
-                <div className="grid grid-cols-2 gap-2">
-                  <button
-                    type="button"
-                    disabled
-                    className="rounded-lg border border-zinc-200 text-[12px] py-1.5 text-zinc-400 cursor-not-allowed"
-                  >
-                    ★ 持ってる
-                  </button>
-                  <button
-                    type="button"
-                    disabled
-                    className="rounded-lg border border-zinc-200 text-[12px] py-1.5 text-zinc-400 cursor-not-allowed"
-                  >
-                    ♡ 欲しい
-                  </button>
-                </div>
               </div>
             </SectionCard>
 

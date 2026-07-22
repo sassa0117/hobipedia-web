@@ -1,7 +1,9 @@
 import Link from "next/link";
+import { unstable_cache } from "next/cache";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
 import { prisma } from "@/lib/prisma";
+import { buildIpCanonicalUrl, buildIpPath, decodeIpPathSegment } from "@/lib/ip-path";
 import { SiteHeader } from "../../_components/SiteHeader";
 import { ItemCard } from "../../_components/ItemCard";
 import { BackBar } from "../../_components/BackBar";
@@ -42,7 +44,7 @@ const SORT_LABEL: Record<SortKey, string> = {
 
 const MIN_CHIP_COUNT = 3;
 
-async function getIpItems(ipShort: string): Promise<ItemRow[]> {
+const getIpItems = unstable_cache(async function getIpItems(ipShort: string): Promise<ItemRow[]> {
   return prisma.$queryRawUnsafe<ItemRow[]>(
     `
     SELECT ci.id, ci.name, ci."ipShort", ci."productType", ci."characterName",
@@ -55,7 +57,7 @@ async function getIpItems(ipShort: string): Promise<ItemRow[]> {
     `,
     ipShort
   );
-}
+}, ["ip-items-v1"], { revalidate: 21600 });
 
 function sortItems(items: ItemRow[], sort: SortKey): ItemRow[] {
   const arr = [...items];
@@ -95,15 +97,12 @@ export async function generateMetadata({
   params: Promise<{ ipShort: string }>;
 }): Promise<Metadata> {
   const { ipShort } = await params;
-  const ip = decodeURIComponent(ipShort);
-  const countRow = await prisma.$queryRawUnsafe<{ c: number }[]>(
-    `SELECT COUNT(*)::int as c FROM "CatalogItem" WHERE "ipShort" = $1`,
-    ip
-  );
-  const count = Number(countRow[0]?.c ?? 0);
+  const ip = decodeIpPathSegment(ipShort);
+  const count = (await getIpItems(ip)).length;
+
   const title = `${ip}のグッズ相場一覧（${count}件）`;
   const description = `${ip}関連のアニメ・ホビーグッズ${count}件の相場・推移・出品情報を一覧で確認。駿河屋とメルカリsoldの実取引データから集計。`;
-  const url = `https://hobipedia.jp/ip/${ipShort}`;
+  const url = buildIpCanonicalUrl(ip);
   return {
     title,
     description,
@@ -135,7 +134,7 @@ function buildHref(
   if (patch.subcat) params.set("subcat", patch.subcat);
   if (patch.sort && patch.sort !== "release_desc") params.set("sort", patch.sort);
   const qs = params.toString();
-  return `/ip/${encodeURIComponent(ipShort)}${qs ? `?${qs}` : ""}`;
+  return `${buildIpPath(ipShort)}${qs ? `?${qs}` : ""}`;
 }
 
 export default async function IpPage({
@@ -147,7 +146,7 @@ export default async function IpPage({
 }) {
   const { ipShort: rawIp } = await params;
   const sp = await searchParams;
-  const ipShort = decodeURIComponent(rawIp);
+  const ipShort = decodeIpPathSegment(rawIp);
   const activeSubcat = sp.subcat ?? null;
   const activeSort: SortKey = (
     sp.sort && sp.sort in SORT_LABEL ? sp.sort : "release_desc"
@@ -220,7 +219,7 @@ export default async function IpPage({
           </Link>
           <span className="mx-1.5">›</span>
           <Link
-            href={`/ip/${encodeURIComponent(ipShort)}`}
+            href={buildIpPath(ipShort)}
             className="hover:underline"
           >
             {ipShort}
