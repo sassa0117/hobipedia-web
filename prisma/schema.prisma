@@ -242,3 +242,15 @@ model LinkClickEvent {
   @@index([ec, createdAt])
   @@index([itemId])
 }
+
+// 商品ページの閲覧数。Cookie・IP・ユーザー識別子は保存しない。
+// LinkClickEvent と同じ日付・itemId 軸で集計し、外部送客率の分母に使う。
+model PageViewEvent {
+  id           String   @id @default(cuid())
+  createdAt    DateTime @default(now())
+  itemId       String
+  referrerHost String?
+
+  @@index([createdAt])
+  @@index([itemId, createdAt])
+}

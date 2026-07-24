@@ -5,6 +5,7 @@ import { Analytics } from "@vercel/analytics/next";
 import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { LinkClickTracker } from "./_components/LinkClickTracker";
+import { PageViewTracker } from "./_components/PageViewTracker";
 
 const geistSans = Geist({
   variable: "--font-geist-sans",
@@ -73,6 +74,7 @@ export default function RootLayout({
             <div>© {new Date().getFullYear()} Hobipedia</div>
           </div>
         </footer>
+        <PageViewTracker />
         <LinkClickTracker />
         <Analytics />
         <SpeedInsights sampleRate={0.5} />
