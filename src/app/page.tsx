@@ -183,7 +183,7 @@ const getTopData = unstable_cache(async function getTopData() {
     typeDist: typeDist.map((r) => ({ ...r, count: Number(r.count) })),
     highValue,
   };
-}, ["home-top-data-v2"], { revalidate: 21600 });
+}, ["home-top-data-v3"], { revalidate: 21600 });
 
 function StatBadge({
   num,
