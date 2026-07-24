@@ -18,7 +18,13 @@ const ALLOWED_EC = new Set([
   "mercari-sold",
 ]);
 
-const ALLOWED_SECTION = new Set(["brand-buttons", "sold-gallery", "sold-table"]);
+const ALLOWED_SECTION = new Set([
+  "brand-buttons",
+  "primary-actions",
+  "comparison-stores",
+  "sold-gallery",
+  "sold-table",
+]);
 
 export async function POST(request: Request) {
   let payload: unknown;

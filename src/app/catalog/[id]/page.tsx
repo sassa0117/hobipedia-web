@@ -434,21 +434,30 @@ export default async function ItemPage({
               </SectionCard>
             )}
 
-            {/* 今買えるところ（11ボタン） */}
-            <SectionCard title="今買えるところ">
-              <div className="grid grid-cols-2 gap-2">
-                <BrandButton href={links.mercari} label="メルカリで探す" bg="#ff4655" ec="mercari" rank={0} />
-                <BrandButton href={links.amazon} label="Amazonで探す" bg="#ff9900" ec="amazon" rank={1} />
-                <BrandButton href={links.rakuten} label="楽天で探す" bg="#bf0000" ec="rakuten" rank={2} />
-                <BrandButton href={links.surugaya} label="駿河屋で見る" bg="#333333" ec="surugaya" rank={3} />
-                <BrandButton href={links.yahooShopping} label="Yahoo!ショッピング" bg="#ff0033" ec="yahoo-shopping" rank={4} />
-                <BrandButton href={links.yahooAuction} label="ヤフオク" bg="#7b0099" ec="yahoo-auction" rank={5} />
-                <BrandButton href={links.paypayFleamarket} label="Yahoo!フリマ" bg="#ff0033" ec="paypay-fleamarket" rank={6} />
-                <BrandButton href={links.animate} label="アニメイト" bg="#0099d4" ec="animate" rank={7} />
-                <BrandButton href={links.pbandai} label="プレバン" bg="#d70a18" ec="pbandai" rank={8} />
-                <BrandButton href={links.mandarake} label="まんだらけ" bg="#003e80" ec="mandarake" rank={9} />
-                <BrandButton href={links.lashinban} label="らしんばん" bg="#ed1c24" ec="lashinban" rank={10} />
+            {/* 収益導線を先に示し、比較先は残す */}
+            <SectionCard title="現在価格を確認する">
+              <div className="space-y-2">
+                <BrandButton href={links.mercari} label="メルカリの出品価格を見る" bg="#ff4655" ec="mercari" rank={0} section="primary-actions" />
+                <div className="grid grid-cols-2 gap-2">
+                  <BrandButton href={links.amazon} label="Amazonで見る" bg="#ff9900" ec="amazon" rank={1} section="primary-actions" />
+                  <BrandButton href={links.rakuten} label="楽天で見る" bg="#bf0000" ec="rakuten" rank={2} section="primary-actions" />
+                </div>
               </div>
+              <details className="mt-3 rounded-lg border border-zinc-200 bg-zinc-50">
+                <summary className="cursor-pointer px-3 py-2.5 text-[12px] font-bold text-zinc-600">
+                  他の店舗でも比較する
+                </summary>
+                <div className="grid grid-cols-2 gap-2 border-t border-zinc-200 p-3">
+                  <BrandButton href={links.surugaya} label="駿河屋で見る" bg="#333333" ec="surugaya" rank={3} section="comparison-stores" />
+                  <BrandButton href={links.yahooShopping} label="Yahoo!ショッピング" bg="#ff0033" ec="yahoo-shopping" rank={4} section="comparison-stores" />
+                  <BrandButton href={links.yahooAuction} label="ヤフオク" bg="#7b0099" ec="yahoo-auction" rank={5} section="comparison-stores" />
+                  <BrandButton href={links.paypayFleamarket} label="Yahoo!フリマ" bg="#ff0033" ec="paypay-fleamarket" rank={6} section="comparison-stores" />
+                  <BrandButton href={links.animate} label="アニメイト" bg="#0099d4" ec="animate" rank={7} section="comparison-stores" />
+                  <BrandButton href={links.pbandai} label="プレバン" bg="#d70a18" ec="pbandai" rank={8} section="comparison-stores" />
+                  <BrandButton href={links.mandarake} label="まんだらけ" bg="#003e80" ec="mandarake" rank={9} section="comparison-stores" />
+                  <BrandButton href={links.lashinban} label="らしんばん" bg="#ed1c24" ec="lashinban" rank={10} section="comparison-stores" />
+                </div>
+              </details>
               <p className="mt-3 text-[11px] text-zinc-400">
                 ※外部リンク。Mercari/Amazon/楽天はアフィリエイト。Yahoo系・楽天はValueCommerce LinkSwitchで自動アフィリ化。
               </p>
