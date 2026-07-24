@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import type { Metadata } from "next";
+import { unstable_cache } from "next/cache";
+import { cache } from "react";
 import { prisma } from "@/lib/prisma";
 import { buildIpPath } from "@/lib/ip-path";
 import { listArticlesForCatalog } from "@/lib/articles";
@@ -13,7 +15,11 @@ import {
   InfoRow,
 } from "../../_components/cards";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 21600;
+
+export async function generateStaticParams() {
+  return [];
+}
 
 const AMAZON_TAG = "aberyuki0117-22";
 const RAKUTEN_AFFILIATE_ID = "533370a1.099bb0f6.533370a2.d87efbc1";
@@ -50,7 +56,7 @@ type CatalogItemRow = {
 
 type SnapshotRow = {
   id: string;
-  createdAt: Date;
+  createdAt: Date | string;
   surugayaPrice: number | null;
   soldOut: boolean;
   mercariMedian: number | null;
@@ -78,6 +84,61 @@ type EventRow = {
   endDate: string | null;
 };
 
+const getCachedCatalogItem = unstable_cache(
+  async (id: string): Promise<CatalogItemRow | null> => {
+    const item = await prisma.$queryRawUnsafe<CatalogItemRow[]>(
+      `SELECT id, name, "surugayaUrl", category, maker, "listPrice", "releaseDate",
+         description, "productType", "characterName", "ipTitle", "ipShort",
+         "imageUrl", "limitedType", "eventName", "mercariKeyword"
+       FROM "CatalogItem" WHERE id = $1`,
+      id
+    );
+
+    return item[0] ?? null;
+  },
+  ["catalog-item-v1"],
+  { revalidate: 21600 }
+);
+
+// generateMetadata と本文が同じ描画中に同一商品を二重取得しないようにする。
+const getCatalogItem = cache(getCachedCatalogItem);
+
+const getCatalogMarketData = unstable_cache(
+  async (id: string, ipShort: string | null, ipTitle: string | null) => {
+    const [snapshots, soldRecords, ipEvents] = await Promise.all([
+      prisma.$queryRawUnsafe<SnapshotRow[]>(
+        `SELECT id, "createdAt", "surugayaPrice", "soldOut", "mercariMedian",
+           "mercariCount", "diffPercent", "trendDirection"
+         FROM "PriceSnapshot" WHERE "itemId" = $1
+         ORDER BY "createdAt" DESC LIMIT 60`,
+        id
+      ),
+      prisma.$queryRawUnsafe<SoldRow[]>(
+        `SELECT id, price, "soldDate", "mercariName", "mercariItemId",
+           "thumbnailUrl", "itemConditionId"
+         FROM "MercariSoldRecord" WHERE "itemId" = $1
+           AND ("geminiVerdict" IS NULL OR "geminiVerdict" IN ('same','variant'))
+         ORDER BY "soldDate" DESC LIMIT 200`,
+        id
+      ),
+      ipShort || ipTitle
+        ? prisma.$queryRawUnsafe<EventRow[]>(
+            `SELECT "ipTitle", "ipShort", "eventType", "eventLabel", "startDate", "endDate"
+             FROM "IpEvent"
+             WHERE "ipShort" = $1 OR "ipTitle" = $2
+             ORDER BY "startDate" ASC LIMIT 12`,
+            ipShort ?? "",
+            ipTitle ?? ""
+          )
+        : Promise.resolve([]),
+    ]);
+
+    return { snapshots, soldRecords, ipEvents };
+  },
+  ["catalog-market-data-v1"],
+  { revalidate: 21600 }
+);
+
 const CONDITION_LABEL: Record<number, string> = {
   1: "新品",
   2: "未使用に近い",
@@ -93,10 +154,7 @@ export async function generateMetadata({
   params: Promise<{ id: string }>;
 }): Promise<Metadata> {
   const { id } = await params;
-  const item = await prisma.catalogItem.findUnique({
-    where: { id },
-    select: { name: true, ipShort: true, imageUrl: true, productType: true },
-  });
+  const item = await getCatalogItem(id);
   if (!item) return { title: "Not Found" };
   const title = `${item.name} 相場・価格推移`;
   const description = `${item.ipShort ?? ""} ${item.name}${
@@ -169,46 +227,15 @@ export default async function ItemPage({
 }) {
   const { id } = await params;
 
-  const item = (
-    await prisma.$queryRawUnsafe<CatalogItemRow[]>(
-      `SELECT id, name, "surugayaUrl", category, maker, "listPrice", "releaseDate",
-         description, "productType", "characterName", "ipTitle", "ipShort",
-         "imageUrl", "limitedType", "eventName", "mercariKeyword"
-       FROM "CatalogItem" WHERE id = $1`,
-      id
-    )
-  )[0];
+  const item = await getCatalogItem(id);
 
   if (!item) notFound();
 
-  const [snapshots, soldRecords, ipEvents, relatedArticles] = await Promise.all([
-    prisma.$queryRawUnsafe<SnapshotRow[]>(
-      `SELECT id, "createdAt", "surugayaPrice", "soldOut", "mercariMedian",
-         "mercariCount", "diffPercent", "trendDirection"
-       FROM "PriceSnapshot" WHERE "itemId" = $1
-       ORDER BY "createdAt" DESC LIMIT 60`,
-      id
-    ),
-    prisma.$queryRawUnsafe<SoldRow[]>(
-      `SELECT id, price, "soldDate", "mercariName", "mercariItemId",
-         "thumbnailUrl", "itemConditionId"
-       FROM "MercariSoldRecord" WHERE "itemId" = $1
-         AND ("geminiVerdict" IS NULL OR "geminiVerdict" IN ('same','variant'))
-       ORDER BY "soldDate" DESC LIMIT 200`,
-      id
-    ),
-    item.ipShort || item.ipTitle
-      ? prisma.$queryRawUnsafe<EventRow[]>(
-          `SELECT "ipTitle", "ipShort", "eventType", "eventLabel", "startDate", "endDate"
-           FROM "IpEvent"
-           WHERE "ipShort" = $1 OR "ipTitle" = $2
-           ORDER BY "startDate" ASC LIMIT 12`,
-          item.ipShort ?? "",
-          item.ipTitle ?? ""
-        )
-      : Promise.resolve([]),
-    listArticlesForCatalog(id),
-  ]);
+  const [{ snapshots, soldRecords, ipEvents }, relatedArticles] =
+    await Promise.all([
+      getCatalogMarketData(id, item.ipShort, item.ipTitle),
+      listArticlesForCatalog(id),
+    ]);
 
   const latest = snapshots[0] ?? null;
   const soldCount = soldRecords.length;
@@ -683,7 +710,7 @@ function buildChartPoints(
 ): { date: string; mercari?: number; surugaya?: number }[] {
   const map = new Map<string, { date: string; mercari?: number; surugaya?: number }>();
   for (const s of snapshots) {
-    const date = s.createdAt.toISOString().slice(0, 10);
+    const date = new Date(s.createdAt).toISOString().slice(0, 10);
     const cur = map.get(date) ?? { date };
     if (s.mercariMedian != null) cur.mercari = s.mercariMedian;
     if (s.surugayaPrice != null) cur.surugaya = s.surugayaPrice;

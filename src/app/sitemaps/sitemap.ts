@@ -1,5 +1,4 @@
 import type { MetadataRoute } from "next";
-import { unstable_cache } from "next/cache";
 import { prisma } from "@/lib/prisma";
 import { buildIpCanonicalUrl } from "@/lib/ip-path";
 import { ARTICLES_PER_PAGE, listArticles } from "@/lib/articles";
@@ -10,13 +9,10 @@ import { ARTICLES_PER_PAGE, listArticles } from "@/lib/articles";
 export const dynamic = "force-dynamic";
 
 const BASE = "https://hobipedia.jp";
+const ITEM_PAGE_SIZE = 44_000;
 
-const getSitemap = unstable_cache(async function getSitemap(): Promise<MetadataRoute.Sitemap> {
-  const [items, ips, articles] = await Promise.all([
-    prisma.catalogItem.findMany({
-      select: { id: true, updatedAt: true },
-      orderBy: { updatedAt: "desc" },
-    }),
+async function getCommonUrls(): Promise<MetadataRoute.Sitemap> {
+  const [ips, articles] = await Promise.all([
     prisma.$queryRawUnsafe<{ ipShort: string; lastSeen: Date | null }[]>(
       `SELECT "ipShort" as "ipShort", MAX("updatedAt") as "lastSeen"
        FROM "CatalogItem" WHERE "ipShort" IS NOT NULL
@@ -41,6 +37,14 @@ const getSitemap = unstable_cache(async function getSitemap(): Promise<MetadataR
       changeFrequency: "weekly",
       priority: 0.5,
     },
+    ...["operator", "terms", "privacy", "inquiry", "correction"].map(
+      (path) => ({
+        url: `${BASE}/${path}`,
+        lastModified: now,
+        changeFrequency: "monthly" as const,
+        priority: 0.3,
+      })
+    ),
   ];
 
   const articleUrls: MetadataRoute.Sitemap = articles.map((a) => ({
@@ -71,6 +75,38 @@ const getSitemap = unstable_cache(async function getSitemap(): Promise<MetadataR
     priority: 0.7,
   }));
 
+  return [
+    ...staticUrls,
+    ...articleUrls,
+    ...articleListPageUrls,
+    ...ipUrls,
+  ];
+}
+
+export function generateSitemaps() {
+  // 68,755 URLs currently require two files. Keep each comfortably below
+  // Google's 50,000 URL limit. SRE raises the partition count before 85,000.
+  return [{ id: 0 }, { id: 1 }];
+}
+
+export default async function sitemap({
+  id,
+}: {
+  id: Promise<number>;
+}): Promise<MetadataRoute.Sitemap> {
+  const page = Number(await id);
+  if (!Number.isInteger(page) || page < 0 || page > 1) return [];
+
+  const [items, commonUrls] = await Promise.all([
+    prisma.catalogItem.findMany({
+      select: { id: true, updatedAt: true },
+      orderBy: { id: "asc" },
+      skip: page * ITEM_PAGE_SIZE,
+      take: ITEM_PAGE_SIZE,
+    }),
+    page === 0 ? getCommonUrls() : Promise.resolve([]),
+  ]);
+
   const itemUrls: MetadataRoute.Sitemap = items.map((it) => ({
     url: `${BASE}/catalog/${it.id}`,
     lastModified: it.updatedAt,
@@ -78,15 +114,5 @@ const getSitemap = unstable_cache(async function getSitemap(): Promise<MetadataR
     priority: 0.6,
   }));
 
-  return [
-    ...staticUrls,
-    ...articleUrls,
-    ...articleListPageUrls,
-    ...ipUrls,
-    ...itemUrls,
-  ];
-}, ["sitemap-v2"], { revalidate: 86400 });
-
-export default function sitemap(): Promise<MetadataRoute.Sitemap> {
-  return getSitemap();
+  return [...commonUrls, ...itemUrls];
 }

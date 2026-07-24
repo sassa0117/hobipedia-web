@@ -4,7 +4,7 @@ import { prisma } from "@/lib/prisma";
 import { buildIpPath } from "@/lib/ip-path";
 import { SiteHeader } from "./_components/SiteHeader";
 
-export const dynamic = "force-dynamic";
+export const revalidate = 21600;
 
 type ItemRow = {
   id: string;

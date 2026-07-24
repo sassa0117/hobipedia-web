@@ -59,7 +59,7 @@ export default function RootLayout({
       <body className="min-h-full flex flex-col bg-white text-zinc-900">
         {children}
         <footer className="mt-12 border-t border-zinc-200 bg-white px-5 py-6 text-xs text-zinc-500">
-          <div className="mx-auto max-w-7xl space-y-2">
+          <div className="mx-auto max-w-7xl space-y-3">
             <div className="flex flex-wrap items-center gap-3 text-sm">
               <span className="font-bold text-zinc-700">姉妹サイト</span>
               <a
@@ -71,6 +71,26 @@ export default function RootLayout({
                 初版コミック相場 — メルカリsoldで追う帯付き・シュリンク・鑑定品の中央値
               </a>
             </div>
+            <nav
+              aria-label="サイト情報"
+              className="flex flex-wrap gap-x-4 gap-y-2"
+            >
+              <a href="/operator" className="hover:text-sky-600 hover:underline">
+                運営者情報
+              </a>
+              <a href="/terms" className="hover:text-sky-600 hover:underline">
+                利用規約
+              </a>
+              <a href="/privacy" className="hover:text-sky-600 hover:underline">
+                プライバシーポリシー
+              </a>
+              <a href="/inquiry" className="hover:text-sky-600 hover:underline">
+                お問い合わせ
+              </a>
+              <a href="/correction" className="hover:text-sky-600 hover:underline">
+                データ訂正
+              </a>
+            </nav>
             <div>© {new Date().getFullYear()} Hobipedia</div>
           </div>
         </footer>
