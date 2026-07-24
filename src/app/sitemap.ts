@@ -6,7 +6,7 @@ import { ARTICLES_PER_PAGE, listArticles } from "@/lib/articles";
 
 // Generated on demand so build-time Neon outages don't fail deploys.
 // Vercel's edge cache + the inherent request-time DB hit keep this cheap
-// enough at ~11k URLs.
+// enough at ~63k URLs.
 export const dynamic = "force-dynamic";
 
 const BASE = "https://hobipedia.jp";
