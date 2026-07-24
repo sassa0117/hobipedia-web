@@ -1,6 +1,8 @@
 import type { Metadata } from "next";
 import { Geist, Geist_Mono } from "next/font/google";
 import Script from "next/script";
+import { Analytics } from "@vercel/analytics/next";
+import { SpeedInsights } from "@vercel/speed-insights/next";
 import "./globals.css";
 import { LinkClickTracker } from "./_components/LinkClickTracker";
 
@@ -72,6 +74,8 @@ export default function RootLayout({
           </div>
         </footer>
         <LinkClickTracker />
+        <Analytics />
+        <SpeedInsights sampleRate={0.5} />
         <Script id="vc-linkswitch-pid" strategy="afterInteractive">
           {`var vc_pid = "892608852";`}
         </Script>
