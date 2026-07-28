@@ -238,7 +238,7 @@ export default async function ItemPage({
     ]);
 
   const latest = snapshots[0] ?? null;
-  const soldCount = soldRecords.length;
+  const mercariSampleCount = latest?.mercariCount ?? 0;
 
   const links = buildAffiliateLinks(item.name, item.surugayaUrl);
   const breadcrumbBack = item.ipShort
@@ -384,7 +384,7 @@ export default async function ItemPage({
               <div className="rounded-xl bg-white p-2.5 text-center shadow-[0_1px_4px_rgba(0,0,0,0.04)] sm:p-3">
                 <div className="text-[10px] text-zinc-400 mb-1">推定相場</div>
                 <div className="text-base font-black text-sky-600 tabular-nums sm:text-lg">
-                  {fmt(latest?.mercariMedian)}
+                  {mercariSampleCount > 0 ? fmt(latest?.mercariMedian) : "—"}
                 </div>
                 <div className="text-[10px] text-zinc-400 mt-0.5">メルカリ中央値</div>
               </div>
@@ -406,7 +406,7 @@ export default async function ItemPage({
             <SectionCard title="価格情報">
               {(() => {
                 const LOW_SAMPLE = 20;
-                const lowSample = soldCount > 0 && soldCount < LOW_SAMPLE;
+                const lowSample = mercariSampleCount > 0 && mercariSampleCount < LOW_SAMPLE;
                 const snapshotDate = latest?.createdAt
                   ? new Date(latest.createdAt)
                       .toLocaleDateString("ja-JP", {
@@ -421,7 +421,7 @@ export default async function ItemPage({
                     <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-5">
                       <PriceCell
                         label="メルカリ中央値"
-                        value={fmt(latest?.mercariMedian)}
+                        value={mercariSampleCount > 0 ? fmt(latest?.mercariMedian) : "—"}
                         cls="text-sky-600"
                         suffix={lowSample ? "*" : undefined}
                       />
@@ -449,8 +449,8 @@ export default async function ItemPage({
                       />
                     </div>
                     <p className="mt-3 text-[11px] text-zinc-400">
-                      {soldCount > 0
-                        ? `メルカリsold ${soldCount}件のデータに基づく`
+                      {mercariSampleCount > 0
+                        ? `メルカリsold ${mercariSampleCount}件のデータに基づく`
                         : "メルカリsoldデータはまだありません"}
                     </p>
                     {snapshotDate && (
