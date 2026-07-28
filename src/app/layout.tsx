@@ -75,6 +75,9 @@ export default function RootLayout({
               aria-label="サイト情報"
               className="flex flex-wrap gap-x-4 gap-y-2"
             >
+              <a href="/methodology" className="hover:text-sky-600 hover:underline">
+                データの見方
+              </a>
               <a href="/operator" className="hover:text-sky-600 hover:underline">
                 運営者情報
               </a>

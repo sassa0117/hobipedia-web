@@ -37,7 +37,7 @@ async function getCommonUrls(): Promise<MetadataRoute.Sitemap> {
       changeFrequency: "weekly",
       priority: 0.5,
     },
-    ...["operator", "terms", "privacy", "inquiry", "correction"].map(
+    ...["methodology", "operator", "terms", "privacy", "inquiry", "correction"].map(
       (path) => ({
         url: `${BASE}/${path}`,
         lastModified: now,

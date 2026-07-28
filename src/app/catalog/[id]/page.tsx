@@ -407,6 +407,15 @@ export default async function ItemPage({
               {(() => {
                 const LOW_SAMPLE = 20;
                 const lowSample = soldCount > 0 && soldCount < LOW_SAMPLE;
+                const snapshotDate = latest?.createdAt
+                  ? new Date(latest.createdAt)
+                      .toLocaleDateString("ja-JP", {
+                        year: "numeric",
+                        month: "2-digit",
+                        day: "2-digit",
+                      })
+                      .replace(/\//g, "/")
+                  : null;
                 return (
                   <>
                     <div className="grid grid-cols-3 gap-x-4 gap-y-4 sm:grid-cols-5">
@@ -444,11 +453,21 @@ export default async function ItemPage({
                         ? `メルカリsold ${soldCount}件のデータに基づく`
                         : "メルカリsoldデータはまだありません"}
                     </p>
+                    {snapshotDate && (
+                      <p className="mt-1 text-[11px] text-zinc-400">
+                        価格データ更新：{snapshotDate}
+                      </p>
+                    )}
                     {lowSample && (
                       <p className="mt-1 text-[11px] text-amber-600">
                         * サンプル数{LOW_SAMPLE}件未満のため参考値（外れ値1件で大きく変動します）
                       </p>
                     )}
+                    <p className="mt-1 text-[11px] text-zinc-400">
+                      <Link href="/methodology" className="hover:underline">
+                        推定相場・更新時点・確からしさについて →
+                      </Link>
+                    </p>
                   </>
                 );
               })()}
